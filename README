@@ -1,0 +1,6 @@
++----+
+|asta|
++----+
+
+Shape annotations for homogeneous numpy arrays and pytorch tensors.
+Based on the excellent 'nptyping' package by Ramon Hagenaars.
