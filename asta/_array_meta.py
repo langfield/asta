@@ -15,7 +15,7 @@ class _ArrayMeta(SubscriptableType):
     @lru_cache()
     def __getitem__(cls, item: Any) -> type:
         """ Defer to ``typish``, which calls ``cls._after_subscription()``. """
-        return SubscriptableType.__getitem__(cls, item) # type: ignore
+        return SubscriptableType.__getitem__(cls, item)  # type: ignore
 
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<array>, Array[<args>])``. """
@@ -50,7 +50,7 @@ class _Array(metaclass=_ArrayMeta):
     generic_type: type = float
     shape: Tuple[Optional[Union[int, Ellipsis_]]]
 
-    def __new__(cls, *args: Tuple[Any], **kwargs: Dict[str, Any]) -> _Array:
+    def __new__(cls, *args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         raise TypeError("Cannot instantiate abstract class 'Array'.")
 
     @classmethod
