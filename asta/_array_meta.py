@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ This module contains meta functionality for the ``Array`` type. """
 from typing import List, Optional, Any, Tuple, Dict, Union
 from functools import lru_cache
@@ -58,10 +60,14 @@ class _Array(metaclass=_ArrayMeta):
         """ Set class attributes based on the passed dtype/dim data. """
 
         # Case where only the dtype of the array is passed (``Array[int]``).
-        if not isinstance(item, tuple):
+        if isinstance(item, type):
             cls.generic_type = item
             print(f"Setting generic type attribute to '{item}'.")
         else:
+            # Treat the case where dtype is not passed in, and there's one input.
+            # i.e. ``Array[1]`` or ``Array[None]`` or ``Array[...]``.
+            if not isinstance(item, tuple):
+                raise NotImplementedError
 
             # Don't allow empty tuples.
             if not item:
