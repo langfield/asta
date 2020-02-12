@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Support for typing Numpy ndarrays. """
 import numpy as np
 from asta._array_meta import _Array
