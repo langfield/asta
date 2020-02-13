@@ -21,26 +21,23 @@ class _ArrayMeta(SubscriptableType):
 
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<array>, Array[<args>])``. """
+        assert hasattr(cls, "generic_type")
+        assert hasattr(cls, "shape")
         result = False
         if isinstance(inst, np.ndarray):
-            result = True  # In case of an empty array or no ``cls._generic_type``.
-            rows = 0
-            cols = 0
-            if len(inst.shape) > 0:
-                rows = inst.shape[0]
-            if len(inst.shape) > 1:
-                cols = inst.shape[1]
+            result = True  # In case of an empty array or no ``cls.generic_type``.
+            if inst.dtype.names:
+                result = False
 
-            if inst.size > 0 and cls.generic_type:
-                if isinstance(cls.generic_type, tuple):
-                    inst_dtypes = [inst.dtype[name] for name in inst.dtype.names]
-                    cls_dtypes = [np.dtype(typ) for typ in cls.generic_type]
-                    result = inst_dtypes == cls_dtypes
-                else:
-                    result = isinstance(inst[0], cls.generic_type)
-                    result |= inst.dtype == np.dtype(cls.generic_type)
-                result &= cls.rows is ... or cls.rows == rows
-                result &= cls.cols is ... or cls.cols == cols
+            print("Generic type:", cls.generic_type)
+            print("Generic np dtype:", np.dtype(cls.generic_type))
+            print("Dtype of instance:", inst.dtype)
+            # elif
+            if cls.generic_type and np.dtype(cls.generic_type) != inst.dtype:
+                result = False
+            if cls.shape:
+                result = result and (inst.shape == cls.shape)
+
         return result
 
 
@@ -48,39 +45,55 @@ class _Array(metaclass=_ArrayMeta):
     """ This class exists to keep the Array class as clean as possible. """
 
     _DIM_TYPES: List[type] = [int, Ellipsis_, NoneType]
-    # TODO: Set default programmatically based on type (array v. tensor).
-    generic_type: type = float
-    shape: Tuple[Optional[Union[int, Ellipsis_]]]
+    generic_type: Optional[Union[type, np.dtype]] = None
+    shape: Optional[Tuple[Optional[Union[int, Ellipsis_]]]] = None
 
     def __new__(cls, *args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         raise TypeError("Cannot instantiate abstract class 'Array'.")
 
     @classmethod
-    def _after_subscription(cls, item: Any) -> None:
+    def _after_subscription(
+        cls, item: Union[type, Optional[Union[int, Ellipsis_]]]
+    ) -> None:
         """ Set class attributes based on the passed dtype/dim data. """
+        err = f"Invalid dimension '{item}' of type '{type(item)}'. "
+        err += f"Valid dimension types: {cls._DIM_TYPES}"
 
         # Case where only the dtype of the array is passed (``Array[int]``).
         if isinstance(item, type):
             cls.generic_type = item
-            print(f"Setting generic type attribute to '{item}'.")
+
+            # If shape is unspecified, set to None.
+            cls.shape = None
+
+        # Treat the case where dtype is not passed in, and there's one input.
+        # i.e. ``Array[1]`` or ``Array[None]`` or ``Array[...]``.
+        elif not isinstance(item, tuple):
+            if type(item) not in cls._DIM_TYPES:
+                raise TypeError(err)
+            cls.shape = (item,)
+
         else:
-            # Treat the case where dtype is not passed in, and there's one input.
-            # i.e. ``Array[1]`` or ``Array[None]`` or ``Array[...]``.
-            if not isinstance(item, tuple):
-                raise NotImplementedError
 
             # Don't allow empty tuples.
             if not item:
-                raise TypeError("Parameter Array[...] cannot be empty.")
+                raise TypeError("'Array[]' index cannot be empty tuple.")
 
-            # So now ``item`` is a tuple, and it has at least 1 element.
-            if isinstance(item[0], type):
-                cls.generic_type = item[0]
+            # So now ``item`` is a tuple with length >= 2.
 
-            # Handle any shape information.
-            if len(item) > 1:
+            # Case where generic type is specified.
+            if isinstance(item[0], (type, np.dtype)):
                 for i, dim in enumerate(item[1:]):
                     if type(dim) not in cls._DIM_TYPES:
-                        err = f"Unexpected type {type(dim)}."
-                        err += f"Valid dimension types: {cls._DIM_TYPES}"
                         raise TypeError(err)
+                cls.generic_type = item[0]
+                cls.shape = item[1:]
+
+            # Case where generic type is unspecified.
+            else:
+                for i, dim in enumerate(item):
+                    if type(dim) not in cls._DIM_TYPES:
+                        raise TypeError(err)
+                cls.generic_type = None
+                cls.shape = item
+
