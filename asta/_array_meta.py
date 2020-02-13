@@ -22,26 +22,23 @@ class _ArrayMeta(SubscriptableType):
 
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<array>, Array[<args>])``. """
+        assert hasattr(cls, "kind")
         assert hasattr(cls, "shape")
         assert hasattr(cls, "dtype")
-        assert hasattr(cls, "kind")
         result = False
         if isinstance(inst, np.ndarray):
             result = True  # In case of an empty array or no ``cls.kind``.
             if inst.dtype.names:
                 result = False
 
-            print("Kind:", cls.kind)
             print("Dtype:", cls.dtype)
-            print("Kind of instance:", inst.dtype.kind)
             print("Dtype of instance:", inst.dtype)
 
-            # If we have ``cls.dtype``, we can be maximally precise.
-            if cls.dtype and cls.dtype != inst.dtype:
+            if cls.kind and cls.kind != inst.dtype.kind:
                 result = False
 
-            # Otherwise, check that the kinds match.
-            elif cls.kind and cls.kind != inst.dtype.kind:
+            # If we have ``cls.dtype``, we can be maximally precise.
+            elif cls.dtype and cls.dtype != inst.dtype and cls.kind == "":
                 result = False
 
             # If we have a shape and it doesn't match, return False.
@@ -66,7 +63,7 @@ class _Array(metaclass=_ArrayMeta):
         np.datetime64,
         np.timedelta64,
     ]
-    _NP_KINDS = [np.dtype(scalar_type).kind for scalar_type in _GENERIC_TYPES]
+    _UNSIZED_TYPE_KINDS: Dict[type, str] = {bytes: "S", str: "U", object: "O"}
     kind: str = ""
     dtype: Optional[np.dtype] = None
     shape: Optional[Tuple[Optional[Union[int, Ellipsis_]]]] = None
@@ -74,25 +71,28 @@ class _Array(metaclass=_ArrayMeta):
     def __new__(cls, *args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         raise TypeError("Cannot instantiate abstract class 'Array'.")
 
-    @staticmethod
-    def get_dtype(item: Any) -> Tuple[Optional[np.dtype], Optional[str]]:
-        """ Computes dtype and kind if item is a dtype, and kind if it's a type. """
+    @classmethod
+    def get_dtype(cls, item: Any) -> Tuple[Optional[np.dtype], str]:
+        """ Computes dtype. """
         dtype = None
-        kind = None
+        kind = ""
 
         # Case where ``item`` is a dtype (``Array[np.dtype("complex128")]``).
         if isinstance(item, np.dtype):
-            kind = item.kind
             dtype = item
 
         # Case where ``item`` is a python3 type (``Array[int]``).
         elif isinstance(item, type):
-            generic_type = item
-            if item == datetime.datetime:
+            if item in cls._UNSIZED_TYPE_KINDS:
+                generic_type = item
+                kind = cls._UNSIZED_TYPE_KINDS[item]
+            elif item == datetime.datetime:
                 generic_type = np.datetime64
-            if item == datetime.timedelta:
+            elif item == datetime.timedelta:
                 generic_type = np.timedelta64
-            kind = np.dtype(generic_type).kind
+            else:
+                generic_type = item
+            dtype = np.dtype(generic_type)
 
         return dtype, kind
 
@@ -115,18 +115,17 @@ class _Array(metaclass=_ArrayMeta):
                 raise TypeError(err)
             cls.shape = (item,)
         else:
-
             # Case where generic type is specified.
             if item and isinstance(item[0], (type, np.dtype)):
                 cls.dtype, cls.kind = _Array.get_dtype(item[0])
                 for i, dim in enumerate(item[1:]):
                     if type(dim) not in cls._DIM_TYPES:
                         raise TypeError(err)
-                cls.shape = item[1:]
+                cls.shape = item[1:]  # type: ignore
 
             # Case where generic type is unspecified.
             else:
                 for i, dim in enumerate(item):
                     if type(dim) not in cls._DIM_TYPES:
                         raise TypeError(err)
-                cls.shape = item
+                cls.shape = item  # type: ignore
