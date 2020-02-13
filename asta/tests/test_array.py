@@ -10,6 +10,7 @@ from asta.tests import strategies as strats
 
 # pylint: disable=no-value-for-parameter
 
+
 @given(hnp.arrays(dtype=strats.dtypes(), shape=strats.shapes()))
 def test_array_passes_generic_isinstance(arr: Array) -> None:
     """ Make sure a generic numpy array is an instance of 'Array'. """

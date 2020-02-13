@@ -13,17 +13,26 @@ from hypothesis.strategies import SearchStrategy
 @st.composite
 def dtypes(draw: Callable[[SearchStrategy], Any]) -> np.dtype:
     """ Strategy for numpy ``dtype`` objects. """
-    raw_type_ids: List[Union[str, int]] = list(np.sctypeDict.keys())
-    type_ids: List[str] = [token for token in raw_type_ids if isinstance(token, str)]
-    # This is an invalid input to ``np.dtype()``.
-    type_ids.remove("V")
-    type_id: str = draw(st.sampled_from(type_ids))
-    print(f"Type id: {type_id}")
-    
-    # DEBUG
-    type_id = "m8"
-
-    dtype = np.dtype(type_id)
+    types: List[np.dtype] = [
+        np.str,
+        np.bool,
+        np.intc,
+        np.intp,
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.float16,
+        np.float32,
+        np.float64,
+        np.complex64,
+        np.complex128,
+    ]
+    dtype = draw(st.sampled_from(types))
     return dtype
 
 
