@@ -21,8 +21,9 @@ def test_array_passes_generic_isinstance(arr: Array) -> None:
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)))
 def test_array_isinstance_npdtype_shape(arr: Array) -> None:
     """ Tests that an array is an instance of 'Array[(<dtype>,)+shape]'. """
-    arg: tuple = (arr.dtype,) + arr.shape
-    assert isinstance(arr, Array[arg])
+    if arr.shape:
+        arg: tuple = (arr.dtype,) + arr.shape
+        assert isinstance(arr, Array[arg])
 
 
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)))
