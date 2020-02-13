@@ -60,7 +60,7 @@ class _Array(metaclass=_ArrayMeta):
         err += f"Valid dimension types: {cls._DIM_TYPES}"
 
         # Case where only the dtype of the array is passed (``Array[int]``).
-        if isinstance(item, type):
+        if isinstance(item, (type, np.dtype)):
             cls.generic_type = item
 
             # If shape is unspecified, set to None.
@@ -72,17 +72,10 @@ class _Array(metaclass=_ArrayMeta):
             if type(item) not in cls._DIM_TYPES:
                 raise TypeError(err)
             cls.shape = (item,)
-
         else:
 
-            # Don't allow empty tuples.
-            if not item:
-                raise TypeError("'Array[]' index cannot be empty tuple.")
-
-            # So now ``item`` is a tuple with length >= 2.
-
             # Case where generic type is specified.
-            if isinstance(item[0], (type, np.dtype)):
+            if item and isinstance(item[0], (type, np.dtype)):
                 for i, dim in enumerate(item[1:]):
                     if type(dim) not in cls._DIM_TYPES:
                         raise TypeError(err)
@@ -96,4 +89,3 @@ class _Array(metaclass=_ArrayMeta):
                         raise TypeError(err)
                 cls.generic_type = None
                 cls.shape = item
-
