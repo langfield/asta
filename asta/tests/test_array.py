@@ -146,7 +146,7 @@ def test_array_not_instance_wrong_type_right_shape(
 
 @given(
     hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)),
-    hnp.array_shapes(min_dims=0),
+    hnp.array_shapes(min_dims=1),
 )
 def test_array_not_instance_right_type_wrong_shape(
     arr: Array, shape: Tuple[int, ...]

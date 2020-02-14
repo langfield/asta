@@ -123,11 +123,13 @@ class _Array(metaclass=_ArrayMeta):
                 for i, dim in enumerate(item[1:]):
                     if type(dim) not in cls._DIM_TYPES:
                         raise TypeError(err)
-                cls.shape = item[1:]  # type: ignore
+                if item[1:]:
+                    cls.shape = item[1:]
 
             # Case where generic type is unspecified.
             else:
                 for i, dim in enumerate(item):
                     if type(dim) not in cls._DIM_TYPES:
                         raise TypeError(err)
-                cls.shape = item  # type: ignore
+                if item:
+                    cls.shape = item
