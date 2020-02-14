@@ -33,6 +33,8 @@ class _ArrayMeta(SubscriptableType):
 
             print("Dtype:", cls.dtype)
             print("Dtype of instance:", inst.dtype)
+            print("Shape:", cls.shape)
+            print("Shape of instance:", inst.shape)
 
             if cls.kind and cls.kind != inst.dtype.kind:
                 result = False
@@ -42,7 +44,7 @@ class _ArrayMeta(SubscriptableType):
                 result = False
 
             # If we have a shape and it doesn't match, return False.
-            elif cls.shape and cls.shape != inst.shape:
+            elif cls.shape is not None and cls.shape != inst.shape:
                 result = False
 
         return result
