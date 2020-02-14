@@ -116,9 +116,11 @@ class _Array(metaclass=_ArrayMeta):
             if type(item) not in cls._DIM_TYPES:
                 raise TypeError(err)
             cls.shape = (item,)
-        else:
+
+        # Case where ``item`` is a nonempty tuple.
+        elif item:
             # Case where generic type is specified.
-            if item and isinstance(item[0], (type, np.dtype)):
+            if isinstance(item[0], (type, np.dtype)):
                 cls.dtype, cls.kind = _Array.get_dtype(item[0])
                 for i, dim in enumerate(item[1:]):
                     if type(dim) not in cls._DIM_TYPES:
@@ -131,5 +133,8 @@ class _Array(metaclass=_ArrayMeta):
                 for i, dim in enumerate(item):
                     if type(dim) not in cls._DIM_TYPES:
                         raise TypeError(err)
-                if item:
-                    cls.shape = item
+                cls.shape = item
+        else:
+            empty_err = "Argument to 'Array[]' cannot be empty tuple. "
+            empty_err += "Use 'Array[None]' to indicate a scalar."
+            raise TypeError(empty_err)

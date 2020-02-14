@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 """ Tests for the 'Array' typing class. """
 from typing import Tuple
+
+import pytest
 import numpy as np
 import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
@@ -11,6 +13,18 @@ from asta import Array
 from asta.tests import strategies as strats
 
 # pylint: disable=no-value-for-parameter
+
+
+def test_array_fails_instantiation() -> None:
+    """ ``Array()`` should raise a TypeError. """
+    with pytest.raises(TypeError):
+        Array()
+
+
+def test_array_disallows_empty_argument() -> None:
+    """ ``Empty tuple should raise a TypeError. """
+    with pytest.raises(TypeError):
+        Array[tuple()]
 
 
 def test_array_passes_ints() -> None:
@@ -53,7 +67,7 @@ def test_array_isinstance_dtype_shape(arr: Array) -> None:
         assert isinstance(arr, Array[arg])
 
 
-@given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)))
+@given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)))
 def test_array_isinstance_shape(arr: Array) -> None:
     """ Tests that an array is an instance of 'Array[shape]'. """
     assert isinstance(arr, Array[arr.shape])
