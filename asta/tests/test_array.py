@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Tests for the 'Array' typing class. """
-from typing import Tuple
+from typing import Tuple, List
 
 import pytest
 import numpy as np
 import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 from hypothesis import given, assume
+from typish._types import Ellipsis_, NoneType
 
 from asta import Array
 from asta.tests import strategies as strats
@@ -24,7 +25,21 @@ def test_array_fails_instantiation() -> None:
 def test_array_disallows_empty_argument() -> None:
     """ ``Empty tuple should raise a TypeError. """
     with pytest.raises(TypeError):
-        Array[tuple()]
+        _ = Array[()]
+
+
+def test_array_raises_on_multiple_nones() -> None:
+    """ ``Array[None,...]`` should raise a TypeError. """
+    with pytest.raises(TypeError):
+        _ = Array[None, None]
+
+
+@given(st.lists(elements=st.just(None), min_size=2))
+def test_array_raises_on_multiple_nones(none_list: List[NoneType]) -> None:
+    """ ``Array[None,...]`` should raise a TypeError. """
+    none_tuple = tuple(none_list)
+    with pytest.raises(TypeError):
+        _ = Array[none_tuple]
 
 
 def test_array_passes_ints() -> None:
@@ -57,32 +72,29 @@ def test_array_notype() -> None:
 def test_array_passes_generic_isinstance(arr: Array) -> None:
     """ Make sure a generic numpy array is an instance of 'Array'. """
     assert isinstance(arr, Array)
-
-
-@given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)))
-def test_array_isinstance_dtype_shape(arr: Array) -> None:
     """ Tests that an array is an instance of 'Array[(<dtype>,)+shape]'. """
     if arr.shape:
         arg: tuple = (arr.dtype,) + arr.shape
         assert isinstance(arr, Array[arg])
+    """ Tests that an array is an instance of 'Array[<dtype>]'. """
+    assert isinstance(arr, Array[arr.dtype])
+    """ Tests that an array is an instance of 'Array[(<dtype>,)]'. """
+    assert isinstance(arr, Array[(arr.dtype,)])
+
+
+@given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=tuple()))
+def test_array_scalar_isinstance_none(arr: Array) -> None:
+    """ Test that 'Array[None]' matches a scalar. """
+    assert isinstance(arr, Array[None])
+    assert isinstance(arr, Array[arr.dtype, None])
 
 
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)))
-def test_array_isinstance_shape(arr: Array) -> None:
+def test_array_scalar_not_instance_none(arr: Array) -> None:
+    """ Test that arr with dim >= 1 is not an ``Array[None]``. """
+    assert not isinstance(arr, Array[None])
     """ Tests that an array is an instance of 'Array[shape]'. """
     assert isinstance(arr, Array[arr.shape])
-
-
-@given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)))
-def test_array_isinstance_dtype(arr: Array) -> None:
-    """ Tests that an array is an instance of 'Array[<dtype>]'. """
-    assert isinstance(arr, Array[arr.dtype])
-
-
-@given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)))
-def test_array_isinstance_dtype_tuple(arr: Array) -> None:
-    """ Tests that an array is an instance of 'Array[(<dtype>,)]'. """
-    assert isinstance(arr, Array[(arr.dtype,)])
 
 
 @given(st.data())
@@ -92,16 +104,8 @@ def test_array_isinstance_scalar_type(data: st.DataObject) -> None:
     dtype = np.dtype(scalar_type)
     arr = data.draw(hnp.arrays(dtype=dtype, shape=hnp.array_shapes(min_dims=0)))
     assert isinstance(arr, Array[scalar_type])
-
-
-@given(st.data())
-def test_array_isinstance_scalar_type_tuple(data: st.DataObject) -> None:
-    """ Tests that an array is an instance of 'Array[<dtype>]'. """
-    scalar_type = data.draw(strats.array_scalar_types())
-    dtype = np.dtype(scalar_type)
-    arr = data.draw(hnp.arrays(dtype=dtype, shape=hnp.array_shapes(min_dims=0)))
+    """ Tests that an array is an instance of 'Array[(<dtype>,)]'. """
     assert isinstance(arr, Array[(scalar_type,)])
-
 
 @given(
     hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)),
@@ -111,15 +115,7 @@ def test_array_is_not_instance_of_other_dtypes(arr: Array, dtype: np.dtype) -> N
     """ Tests that an array isn't instance of 'Array[dtype]' for any other dtype. """
     assume(arr.dtype != dtype)
     assert not isinstance(arr, Array[dtype])
-
-
-@given(
-    hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)),
-    hnp.scalar_dtypes(),
-)
-def test_array_not_instance_dtype_typles(arr: Array, dtype: np.dtype) -> None:
     """ Tests that an array isn't instance of 'Array[(dtype,)]' for any other dtype. """
-    assume(arr.dtype != dtype)
     assert not isinstance(arr, Array[(dtype,)])
 
 
@@ -129,30 +125,12 @@ def test_array_not_instance_dtype_typles(arr: Array, dtype: np.dtype) -> None:
 )
 def test_array_is_not_instance_of_other_types(arr: Array, scalar_type: type) -> None:
     """ Tests that an array isn't instance of 'Array[<type>]' for any other type. """
-    assume(np.dtype(scalar_type) != arr.dtype)
-    assert not isinstance(arr, Array[scalar_type])
-
-
-@given(
-    hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)),
-    strats.array_scalar_types(),
-)
-def test_array_not_instance_scalar_type_tuples(arr: Array, scalar_type: type) -> None:
-    """ Tests that an array isn't instance of 'Array[(type,)]' for any other type. """
-    assume(np.dtype(scalar_type) != arr.dtype)
-    assert not isinstance(arr, Array[(scalar_type,)])
-
-
-@given(
-    hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)),
-    strats.array_scalar_types(),
-)
-def test_array_not_instance_wrong_type_right_shape(
-    arr: Array, scalar_type: type
-) -> None:
-    """ Tests that an array is an instance of 'Array[(<dtype>,)+shape]'. """
     dtype = np.dtype(scalar_type)
     assume(dtype != arr.dtype)
+    assert not isinstance(arr, Array[scalar_type])
+    """ Tests that an array isn't instance of 'Array[(type,)]' for any other type. """
+    assert not isinstance(arr, Array[(scalar_type,)])
+    """ Tests that an array is an instance of 'Array[(<dtype>,)+shape]'. """
     if arr.shape:
         arg: tuple = (dtype,) + arr.shape
         assert not isinstance(arr, Array[arg])
