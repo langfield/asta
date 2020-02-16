@@ -68,7 +68,7 @@ class _Array(metaclass=_ArrayMeta):
     _UNSIZED_TYPE_KINDS: Dict[type, str] = {bytes: "S", str: "U", object: "O"}
     kind: str = ""
     dtype: Optional[np.dtype] = None
-    shape: Optional[Tuple[Optional[Union[int, Ellipsis_]]]] = None
+    shape: Optional[Tuple] = None
 
     def __new__(cls, *args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         raise TypeError("Cannot instantiate abstract class 'Array'.")
@@ -98,16 +98,37 @@ class _Array(metaclass=_ArrayMeta):
 
         return dtype, kind
 
+    @staticmethod
+    def get_shape(item: Tuple,) -> Optional[Tuple]:
+        """ Compute shape from a shape tuple argument. """
+        shape: Optional[Tuple] = None
+        if item:
+            if None not in item:
+                shape = item
+            elif item == (None,):
+                shape = ()
+            else:
+                none_err = "Too many 'None' arguments. "
+                none_err += "Use 'Array[None]' for scalar arrays."
+                raise TypeError(none_err)
+
+        return shape
+
     @classmethod
     def _after_subscription(
         cls, item: Union[type, Optional[Union[int, Ellipsis_]]]
     ) -> None:
         """ Set class attributes based on the passed dtype/dim data. """
+
         err = f"Invalid dimension '{item}' of type '{type(item)}'. "
         err += f"Valid dimension types: {cls._DIM_TYPES}"
 
-        cls.dtype, cls.kind = _Array.get_dtype(item)
-        if isinstance(item, (np.dtype, type)):
+        # Case where dtype is Any and shape is scalar.
+        if item is None:
+            cls.shape = ()
+
+        elif isinstance(item, (np.dtype, type)):
+            cls.dtype, cls.kind = _Array.get_dtype(item)
             cls.shape = None
 
         # Case where dtype is not passed in, and there's one input.
@@ -119,21 +140,21 @@ class _Array(metaclass=_ArrayMeta):
 
         # Case where ``item`` is a nonempty tuple.
         elif item:
+
             # Case where generic type is specified.
             if isinstance(item[0], (type, np.dtype)):
                 cls.dtype, cls.kind = _Array.get_dtype(item[0])
                 for i, dim in enumerate(item[1:]):
                     if type(dim) not in cls._DIM_TYPES:
                         raise TypeError(err)
-                if item[1:]:
-                    cls.shape = item[1:]
+                cls.shape = _Array.get_shape(item[1:])
 
             # Case where generic type is unspecified.
             else:
                 for i, dim in enumerate(item):
                     if type(dim) not in cls._DIM_TYPES:
                         raise TypeError(err)
-                cls.shape = item
+                cls.shape = _Array.get_shape(item)
         else:
             empty_err = "Argument to 'Array[]' cannot be empty tuple. "
             empty_err += "Use 'Array[None]' to indicate a scalar."
