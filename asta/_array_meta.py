@@ -9,7 +9,45 @@ import numpy as np
 from typish import SubscriptableType
 from typish._types import Ellipsis_, NoneType
 
-# pylint: disable=unidiomatic-typecheck, too-few-public-methods
+# pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
+
+
+def is_subtuple(
+    sub: Tuple[Union[int, Ellipsis_], ...], tup: Tuple[Union[int, Ellipsis_], ...]
+) -> Tuple[bool, int]:
+    """ Check for tuple inclusion, return index of first one. """
+    assert isinstance(sub, tuple)
+    assert isinstance(tup, tuple)
+    for i in range(len(tup) - len(sub) + 1):
+        if sub == tup[i : i + len(sub)]:
+            return True, i
+    return False, -1
+
+
+def split(
+    shape: Tuple[Union[int, Ellipsis_], ...], elem: Union[int, Ellipsis_]
+) -> List[Tuple[int, ...]]:
+    """ Split on an element. """
+    shape_list = list(shape)
+    tokens: List[str] = []
+    for num in shape_list:
+        if num == elem:
+            tokens.append("@")
+        else:
+            assert isinstance(num, int)
+            tokens.append(str(num))
+    seq: str = ",".join(tokens)
+    comma_fragments: List[str] = seq.split("@")
+
+    result: List[Tuple[int, ...]] = []
+    for frag in comma_fragments:
+        if frag:
+            frag_tokens = [token for token in frag.split(",") if token]
+            frag_nums = [int(token) for token in frag_tokens]
+            frag_tuple = tuple(frag_nums)
+            result.append(frag_tuple)
+
+    return result
 
 
 class _ArrayMeta(SubscriptableType):
@@ -25,29 +63,78 @@ class _ArrayMeta(SubscriptableType):
         assert hasattr(cls, "kind")
         assert hasattr(cls, "shape")
         assert hasattr(cls, "dtype")
-        result = False
+        match = False
         if isinstance(inst, np.ndarray):
-            result = True  # In case of an empty array or no ``cls.kind``.
+            match = True  # In case of an empty array or no ``cls.kind``.
             if inst.dtype.names:
-                result = False
-
-            print("Dtype:", cls.dtype)
-            print("Dtype of instance:", inst.dtype)
-            print("Shape:", cls.shape)
-            print("Shape of instance:", inst.shape)
+                match = False
 
             if cls.kind and cls.kind != inst.dtype.kind:
-                result = False
+                match = False
 
             # If we have ``cls.dtype``, we can be maximally precise.
             elif cls.dtype and cls.dtype != inst.dtype and cls.kind == "":
-                result = False
+                match = False
 
-            # If we have a shape and it doesn't match, return False.
-            elif cls.shape is not None and cls.shape != inst.shape:
-                result = False
+            # Handle Ellipsis.
+            elif cls.shape is not None:
+                if Ellipsis not in cls.shape and -1 not in cls.shape:
+                    if cls.shape != inst.shape:
+                        match = False
+                elif inst.shape == tuple() != cls.shape:
+                    match = False
+                else:
+                    if is_subtuple((Ellipsis, Ellipsis), cls.shape)[0]:
+                        raise TypeError("Invalid shape: repeated '...'")
 
-        return result
+                    left_bookend = False
+                    right_bookend = False
+                    ellipsis_positions: List[int] = []
+                    for i, elem in enumerate(cls.shape):
+                        if elem == Ellipsis:
+                            if i == 0:
+                                left_bookend = True
+                            if i == len(cls.shape) - 1:
+                                right_bookend = True
+                            ellipsis_positions.append(i)
+
+                    frags = split(cls.shape, Ellipsis)
+                    ishape = inst.shape
+
+                    # Cut off end if '...' is there.
+                    if left_bookend:
+                        ishape = ishape[1:]
+                    if right_bookend:
+                        ishape = ishape[:-1]
+
+                    for i, frag in enumerate(frags):
+                        is_sub, index = is_subtuple(frag, ishape)
+
+                        # Must have ``frag`` contained in ``ishape``.
+                        if not is_sub:
+                            match = False
+                            break
+
+                        # First fragment must start at 0 if '...' is not the first
+                        # element of ``cls.shape``.
+                        if i == 0 and not left_bookend and index != 0:
+                            match = False
+                            break
+
+                        # Last fragement must end at (exclusive) ``len(ishape)`` if
+                        # '...' is not the last element of ``cls.shape``.
+                        if (
+                            i == len(frags) - 1
+                            and not right_bookend
+                            and index + len(frag) != len(ishape)
+                        ):
+                            match = False
+                            break
+
+                        new_start = index + len(frag) + 1
+                        ishape = ishape[new_start:]
+
+        return match
 
 
 class _Array(metaclass=_ArrayMeta):
@@ -159,3 +246,6 @@ class _Array(metaclass=_ArrayMeta):
             empty_err = "Argument to 'Array[]' cannot be empty tuple. "
             empty_err += "Use 'Array[None]' to indicate a scalar."
             raise TypeError(empty_err)
+
+        if cls.shape is not None and is_subtuple((Ellipsis, Ellipsis), cls.shape)[0]:
+            raise TypeError("Invalid shape: repeated '...'")

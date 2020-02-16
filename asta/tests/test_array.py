@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Tests for the 'Array' typing class. """
+import random
 from typing import Tuple, List
 
 import pytest
@@ -8,12 +9,21 @@ import numpy as np
 import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 from hypothesis import given, assume
-from typish._types import Ellipsis_, NoneType
+from typish._types import NoneType
 
 from asta import Array
 from asta.tests import strategies as strats
 
 # pylint: disable=no-value-for-parameter
+
+
+def rand_split_shape(shape: Tuple[int, ...]) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
+    """ Splits a shape and removes a nonempty continguous portion. """
+    start = random.randrange(len(shape))
+    end = random.randint(start + 1, len(shape))
+    left = shape[:start]
+    right = shape[end:]
+    return left, right
 
 
 def test_array_fails_instantiation() -> None:
@@ -28,7 +38,7 @@ def test_array_disallows_empty_argument() -> None:
         _ = Array[()]
 
 
-def test_array_raises_on_multiple_nones() -> None:
+def test_array_raises_on_two_nones() -> None:
     """ ``Array[None,...]`` should raise a TypeError. """
     with pytest.raises(TypeError):
         _ = Array[None, None]
@@ -72,14 +82,11 @@ def test_array_notype() -> None:
 def test_array_passes_generic_isinstance(arr: Array) -> None:
     """ Make sure a generic numpy array is an instance of 'Array'. """
     assert isinstance(arr, Array)
-    """ Tests that an array is an instance of 'Array[(<dtype>,)+shape]'. """
+    assert isinstance(arr, Array[arr.dtype])
+    assert isinstance(arr, Array[(arr.dtype,)])
     if arr.shape:
         arg: tuple = (arr.dtype,) + arr.shape
         assert isinstance(arr, Array[arg])
-    """ Tests that an array is an instance of 'Array[<dtype>]'. """
-    assert isinstance(arr, Array[arr.dtype])
-    """ Tests that an array is an instance of 'Array[(<dtype>,)]'. """
-    assert isinstance(arr, Array[(arr.dtype,)])
 
 
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=tuple()))
@@ -87,14 +94,33 @@ def test_array_scalar_isinstance_none(arr: Array) -> None:
     """ Test that 'Array[None]' matches a scalar. """
     assert isinstance(arr, Array[None])
     assert isinstance(arr, Array[arr.dtype, None])
+    assert not isinstance(arr, Array[...])
+    assert not isinstance(arr, Array[arr.dtype, ...])
 
 
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)))
-def test_array_scalar_not_instance_none(arr: Array) -> None:
-    """ Test that arr with dim >= 1 is not an ``Array[None]``. """
+def test_array_handles_nontrival_shapes(arr: Array) -> None:
+    """ Test that arr with dim >= 1 is not scalar, and passes for its own shape. """
+    if arr.shape:
+        left, right = rand_split_shape(arr.shape)
+        assert isinstance(arr, Array[left + (...,) + right])
     assert not isinstance(arr, Array[None])
-    """ Tests that an array is an instance of 'Array[shape]'. """
     assert isinstance(arr, Array[arr.shape])
+    assert isinstance(arr, Array[...])
+    assert isinstance(arr, Array[(...,)])
+
+
+@given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)))
+def test_array_handles_invalid_ellipsis_shapes(arr: Array) -> None:
+    """ Test that arr with dim >= 1 is not scalar, and passes for its own shape. """
+    if arr.shape:
+        left, right = rand_split_shape(arr.shape)
+        with pytest.raises(TypeError):
+            Array[left + (..., ...)]
+        with pytest.raises(TypeError):
+            Array[(..., ...) + right]
+        with pytest.raises(TypeError):
+            Array[(..., ...)]
 
 
 @given(st.data())
@@ -104,8 +130,8 @@ def test_array_isinstance_scalar_type(data: st.DataObject) -> None:
     dtype = np.dtype(scalar_type)
     arr = data.draw(hnp.arrays(dtype=dtype, shape=hnp.array_shapes(min_dims=0)))
     assert isinstance(arr, Array[scalar_type])
-    """ Tests that an array is an instance of 'Array[(<dtype>,)]'. """
     assert isinstance(arr, Array[(scalar_type,)])
+
 
 @given(
     hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)),
@@ -115,7 +141,6 @@ def test_array_is_not_instance_of_other_dtypes(arr: Array, dtype: np.dtype) -> N
     """ Tests that an array isn't instance of 'Array[dtype]' for any other dtype. """
     assume(arr.dtype != dtype)
     assert not isinstance(arr, Array[dtype])
-    """ Tests that an array isn't instance of 'Array[(dtype,)]' for any other dtype. """
     assert not isinstance(arr, Array[(dtype,)])
 
 
@@ -128,12 +153,9 @@ def test_array_is_not_instance_of_other_types(arr: Array, scalar_type: type) -> 
     dtype = np.dtype(scalar_type)
     assume(dtype != arr.dtype)
     assert not isinstance(arr, Array[scalar_type])
-    """ Tests that an array isn't instance of 'Array[(type,)]' for any other type. """
     assert not isinstance(arr, Array[(scalar_type,)])
-    """ Tests that an array is an instance of 'Array[(<dtype>,)+shape]'. """
     if arr.shape:
-        arg: tuple = (dtype,) + arr.shape
-        assert not isinstance(arr, Array[arg])
+        assert not isinstance(arr, Array[(dtype,) + arr.shape])
 
 
 @given(
