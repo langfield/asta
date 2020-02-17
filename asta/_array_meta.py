@@ -9,6 +9,7 @@ import numpy as np
 from typish import SubscriptableType
 from typish._types import Ellipsis_, NoneType
 
+
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
 
 
@@ -51,7 +52,7 @@ def split(
 
 
 class _ArrayMeta(SubscriptableType):
-    """ A Meta class for the Array class. """
+    """ A meta class for the ``Array`` class. """
 
     @lru_cache()
     def __getitem__(cls, item: Any) -> type:
@@ -76,7 +77,7 @@ class _ArrayMeta(SubscriptableType):
             elif cls.dtype and cls.dtype != inst.dtype and cls.kind == "":
                 match = False
 
-            # Handle Ellipsis.
+            # Handle ellipses.
             elif cls.shape is not None:
                 if Ellipsis not in cls.shape and -1 not in cls.shape:
                     if cls.shape != inst.shape:
@@ -87,21 +88,27 @@ class _ArrayMeta(SubscriptableType):
                     if is_subtuple((Ellipsis, Ellipsis), cls.shape)[0]:
                         raise TypeError("Invalid shape: repeated '...'")
 
+                    # Determine if/where '...' bookends ``cls.shape``.
                     left_bookend = False
                     right_bookend = False
                     ellipsis_positions: List[int] = []
                     for i, elem in enumerate(cls.shape):
                         if elem == Ellipsis:
+
+                            # e.g. ``Array[..., 1, 2, 3]``.
                             if i == 0:
                                 left_bookend = True
+
+                            # e.g. ``Array[1, 2, 3, ...]``.
                             if i == len(cls.shape) - 1:
                                 right_bookend = True
                             ellipsis_positions.append(i)
 
-                    frags = split(cls.shape, Ellipsis)
-                    ishape = inst.shape
+                    # Analogous to ``str.split(<elem>)``, we split the shape on '...'.
+                    frags: List[Tuple[int, ...]] = split(cls.shape, Ellipsis)
 
                     # Cut off end if '...' is there.
+                    ishape = inst.shape
                     if left_bookend:
                         ishape = ishape[1:]
                     if right_bookend:
