@@ -1,4 +1,7 @@
-from typing import Any
+from typing import Any, TypeVar
+from functools import lru_cache
+
+T = TypeVar("T")
 
 
 class SubscriptableType(type):
@@ -7,7 +10,8 @@ class SubscriptableType(type):
     def __init_subclass__(cls) -> None:
         cls._hash = 0
 
-    def __getitem__(cls, item: Any) -> Any:
+    @lru_cache()
+    def __getitem__(cls, item: Any) -> type:
         body = {
             **cls.__dict__,
             "__args__": item,
@@ -34,7 +38,11 @@ class SubscriptableType(type):
         return cls._hash
 
 
-class AType(metaclass=SubscriptableType):
+class AMeta(SubscriptableType):
+    pass
+
+
+class AType(metaclass=AMeta):
     pass
 
 
@@ -50,6 +58,7 @@ def function_3(x: AType[None]) -> AType[None]:
     return x
 
 
-def main():
+def main() -> None:
     x = 0
     isinstance(x, AType[int])
+    isinstance(x, AType[...])
