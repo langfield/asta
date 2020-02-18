@@ -7,8 +7,7 @@ from functools import lru_cache
 
 import numpy as np
 
-# from typish import SubscriptableType
-from asta.demo import SubscriptableType
+from typish import SubscriptableType
 from typish._types import Ellipsis_, NoneType
 
 
