@@ -12,6 +12,11 @@ Todo
   to be silenced within the package itself. (DONE)
 - Delete ``demo.py``. (DONE)
 - Implement ``-1`` wildcard shape element suppport. (DONE)
-- Add tests for ``Tensor``.
+- Add tests for ``Tensor``. (DONE)
 - Write examples in README.
 - Add tests for empty arrays and tensors.
+- Add reprs.
+- Fix tensor strategy.
+- Add an option to disable typechecked decorator (default=disabled, ``.astarc`` file).
+- Add tests for ``@typechecked``.
+- Consider changing name of decorator to ``@shapechecked``.
