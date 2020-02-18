@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any, TypeVar, Generic
 from functools import lru_cache
 
 import numpy as np
