@@ -7,7 +7,8 @@ from functools import lru_cache
 
 import numpy as np
 
-from typish import SubscriptableType
+# from typish import SubscriptableType
+from asta._classes import SubscriptableMeta, SubscriptableType
 from typish._types import Ellipsis_, NoneType
 
 
@@ -52,7 +53,7 @@ def split(
     return result
 
 
-class _ArrayMeta(SubscriptableType):
+class _ArrayMeta(SubscriptableMeta):
     """ A meta class for the ``Array`` class. """
 
     kind: str
@@ -60,9 +61,9 @@ class _ArrayMeta(SubscriptableType):
     dtype: np.dtype
 
     @lru_cache()
-    def __getitem__(cls, item: Any) -> type:
+    def __getitem__(cls, item: Any) -> SubscriptableType:
         """ Defer to ``typish``, which calls ``cls._after_subscription()``. """
-        return SubscriptableType.__getitem__(cls, item)
+        return SubscriptableMeta.__getitem__(cls, item)
 
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<array>, Array[<args>])``. """
