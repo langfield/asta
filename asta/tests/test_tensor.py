@@ -63,7 +63,6 @@ def test_tensor_passes_ints() -> None:
     int16 = torch.ones((1, 1), dtype=torch.int16)
     int32 = torch.ones((1, 1), dtype=torch.int32)
     int64 = torch.ones((1, 1), dtype=torch.int64)
-    print("Type of Tensor[int]:", type(Tensor[int]))
     assert not isinstance(int8, Tensor[int])
     assert not isinstance(int16, Tensor[int])
     assert not isinstance(int64, Tensor[int])
@@ -84,11 +83,7 @@ def test_tensor_notype() -> None:
     assert not isinstance(int8, Tensor[1, 2])
 
 
-@given(
-    strats.tensors(
-        dtype=strats.tensor_scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)
-    )
-)
+@given(strats.tensors())
 def test_tensor_passes_generic_isinstance(t: Tensor) -> None:
     """ Make sure a generic numpy tensor is an instance of 'Tensor'. """
     assert isinstance(t, Tensor)
@@ -99,22 +94,21 @@ def test_tensor_passes_generic_isinstance(t: Tensor) -> None:
         assert isinstance(t, Tensor[arg])
 
 
-@given(strats.tensors(dtype=strats.tensor_scalar_dtypes(), shape=tuple()))
-def test_tensor_scalar_isinstance_none(t: Tensor) -> None:
+@given(st.data())
+def test_tensor_scalar_isinstance_none(data: st.DataObject) -> None:
     """ Test that 'Tensor[None]' matches a scalar. """
+    t = data.draw(strats.tensors(shape=tuple()))
     assert isinstance(t, Tensor[None])
     assert isinstance(t, Tensor[t.dtype, None])
     assert not isinstance(t, Tensor[...])
     assert not isinstance(t, Tensor[t.dtype, ...])
 
 
-@given(
-    strats.tensors(
-        dtype=strats.tensor_scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)
-    )
-)
-def test_tensor_handles_nontrival_shapes(t: Tensor) -> None:
+@given(st.data())
+def test_tensor_handles_nontrival_shapes(data: st.DataObject) -> None:
     """ Test that t with dim >= 1 is not scalar, and passes for its own shape. """
+    shape = data.draw(hnp.array_shapes(min_dims=1))
+    t = data.draw(strats.tensors(shape=shape))
     if t.shape:
         left, right = rand_split_shape(t.shape)
         assert isinstance(t, Tensor[left + (...,) + right])
@@ -143,16 +137,13 @@ def test_tensor_handles_wildcard_shapes(data: st.DataObject) -> None:
             rep_seq.append(replacements.pop())
         else:
             rep_seq.append(dim)
-    t = data.draw(
-        strats.tensors(dtype=strats.tensor_scalar_dtypes(), shape=tuple(rep_seq))
-    )
+    t = data.draw(strats.tensors(shape=tuple(rep_seq)))
     shape = tuple(seq)
-    print("Shape:", shape)
     assert isinstance(t, Tensor[shape])
 
 
 @given(st.data())
-def test_tensor_fails_wild_wildcards(data: st.DataObject) -> None:
+def test_tensor_fails_with_wildcards(data: st.DataObject) -> None:
     """ Tests that if a wildcard is removed with a non-match, isinstance fails. """
     seq = list(data.draw(hnp.array_shapes(min_dims=0)))
     num_wildcards = data.draw(st.integers(min_value=1, max_value=3))
@@ -179,19 +170,12 @@ def test_tensor_fails_wild_wildcards(data: st.DataObject) -> None:
 
     delta = data.draw(st.integers(min_value=1, max_value=6))
     seq[bad_index] = rep_seq[bad_index] + delta
-    t = data.draw(
-        strats.tensors(dtype=strats.tensor_scalar_dtypes(), shape=tuple(rep_seq))
-    )
+    t = data.draw(strats.tensors(shape=tuple(rep_seq)))
     shape = tuple(seq)
-    print("Shape:", shape)
     assert not isinstance(t, Tensor[shape])
 
 
-@given(
-    strats.tensors(
-        dtype=strats.tensor_scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)
-    )
-)
+@given(strats.tensors())
 def test_tensor_handles_invalid_ellipsis_shapes(t: Tensor) -> None:
     """ Test that t with dim >= 1 is not scalar, and passes for its own shape. """
     if t.shape:
@@ -214,12 +198,7 @@ def test_tensor_isinstance_scalar_type(data: st.DataObject) -> None:
     assert isinstance(t, Tensor[(scalar_type,)])
 
 
-@given(
-    strats.tensors(
-        dtype=strats.tensor_scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)
-    ),
-    strats.tensor_scalar_dtypes(),
-)
+@given(strats.tensors(), strats.tensor_scalar_dtypes())
 def test_tensor_is_not_instance_of_other_dtypes(t: Tensor, dtype: torch.dtype) -> None:
     """ Tests that an tensor isn't instance of 'Tensor[dtype]' for any other dtype. """
     assume(t.dtype != dtype)
@@ -227,19 +206,10 @@ def test_tensor_is_not_instance_of_other_dtypes(t: Tensor, dtype: torch.dtype) -
     assert not isinstance(t, Tensor[(dtype,)])
 
 
-@given(
-    strats.tensors(
-        dtype=strats.tensor_scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)
-    ),
-    strats.tensor_scalar_types(),
-)
+@given(st.data())
 def test_tensor_is_not_instance_of_other_types(data: st.DataObject) -> None:
     """ Tests that an tensor isn't instance of 'Tensor[<type>]' for any other type. """
-    t = data.draw(
-        strats.tensors(
-            dtype=strats.tensor_scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)
-        )
-    )
+    t = data.draw(strats.tensors())
     scalar_type = data.draw(strats.tensor_scalar_types())
     dtype = strats.tensor_scalar_dtype_from_type(scalar_type=scalar_type)
     assume(dtype != t.dtype)
@@ -249,12 +219,7 @@ def test_tensor_is_not_instance_of_other_types(data: st.DataObject) -> None:
         assert not isinstance(t, Tensor[(dtype,) + t.shape])
 
 
-@given(
-    strats.tensors(
-        dtype=strats.tensor_scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)
-    ),
-    hnp.array_shapes(min_dims=1),
-)
+@given(strats.tensors(), hnp.array_shapes(min_dims=1))
 def test_tensor_not_instance_right_type_wrong_shape(
     t: Tensor, shape: Tuple[int, ...]
 ) -> None:
@@ -265,13 +230,7 @@ def test_tensor_not_instance_right_type_wrong_shape(
         assert not isinstance(t, Tensor[arg])
 
 
-@given(
-    strats.tensors(
-        dtype=strats.tensor_scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)
-    ),
-    strats.tensor_scalar_types(),
-    hnp.array_shapes(min_dims=0),
-)
+@given(strats.tensors(), strats.tensor_scalar_types(), hnp.array_shapes(min_dims=0))
 def test_tensor_not_instance_wrong_type_wrong_shape(
     t: Tensor, scalar_type: type, shape: Tuple[int, ...]
 ) -> None:

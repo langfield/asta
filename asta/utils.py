@@ -4,6 +4,7 @@
 import random
 from typing import List, Tuple, Union
 
+import torch
 from typish import Ellipsis_
 
 
@@ -64,8 +65,12 @@ def wildcard_eq(
     return True
 
 
-def rand_split_shape(shape: Tuple[int, ...]) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
+def rand_split_shape(
+    shape: Union[Tuple[int, ...], torch.Size]
+) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
     """ Splits a shape and removes a nonempty continguous portion. """
+    if isinstance(shape, torch.Size):
+        shape = tuple(shape)
     start = random.randrange(len(shape))
     end = random.randint(start + 1, len(shape))
     left = shape[:start]
