@@ -111,6 +111,65 @@ def test_array_handles_nontrival_shapes(arr: Array) -> None:
     assert isinstance(arr, Array[(...,)])
 
 
+@given(st.data())
+def test_array_handles_wildcard_shapes(data: st.DataObject) -> None:
+    """ Test that arr with dim >= 1 is not scalar, and passes for its own shape. """
+    seq = list(data.draw(hnp.array_shapes(min_dims=0)))
+    num_wildcards = data.draw(st.integers(min_value=1, max_value=3))
+    seq.extend([-1] * num_wildcards)
+    replacements = data.draw(
+        st.lists(
+            st.integers(min_value=1, max_value=4),
+            min_size=num_wildcards,
+            max_size=num_wildcards,
+        )
+    )
+    rep_seq = []
+    for dim in seq:
+        if dim == -1:
+            rep_seq.append(replacements.pop())
+        else:
+            rep_seq.append(dim)
+    arr = data.draw(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=tuple(rep_seq)))
+    shape = tuple(seq)
+    print("Shape:", shape)
+    assert isinstance(arr, Array[shape])
+
+
+@given(st.data())
+def test_array_fails_wild_wildcards(data: st.DataObject) -> None:
+    """ Tests that if a wildcard is removed with a non-match, isinstance fails. """
+    seq = list(data.draw(hnp.array_shapes(min_dims=0)))
+    num_wildcards = data.draw(st.integers(min_value=1, max_value=3))
+    seq.extend([-1] * num_wildcards)
+    replacements = data.draw(
+        st.lists(
+            st.integers(min_value=1, max_value=4),
+            min_size=num_wildcards,
+            max_size=num_wildcards,
+        )
+    )
+    rep_seq = []
+    wildcard_indices = []
+    for i, dim in enumerate(seq):
+        if dim == -1:
+            wildcard_indices.append(i)
+    bad_index = data.draw(st.sampled_from(wildcard_indices))
+
+    for i, dim in enumerate(seq):
+        if dim == -1:
+            rep_seq.append(replacements.pop())
+        else:
+            rep_seq.append(dim)
+
+    delta = data.draw(st.integers(min_value=1, max_value=6))
+    seq[bad_index] = rep_seq[bad_index] + delta
+    arr = data.draw(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=tuple(rep_seq)))
+    shape = tuple(seq)
+    print("Shape:", shape)
+    assert not isinstance(arr, Array[shape])
+
+
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)))
 def test_array_handles_invalid_ellipsis_shapes(arr: Array) -> None:
     """ Test that arr with dim >= 1 is not scalar, and passes for its own shape. """
