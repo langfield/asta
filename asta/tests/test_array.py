@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 # type: ignore
 """ Tests for the 'Array' typing class. """
-import random
 from typing import Tuple, List
 
 import pytest
@@ -13,18 +12,23 @@ from hypothesis import given, assume
 from typish._types import NoneType
 
 from asta import Array
+from asta.utils import rand_split_shape
 from asta.tests import strategies as strats
 
 # pylint: disable=no-value-for-parameter
 
 
-def rand_split_shape(shape: Tuple[int, ...]) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
-    """ Splits a shape and removes a nonempty continguous portion. """
-    start = random.randrange(len(shape))
-    end = random.randint(start + 1, len(shape))
-    left = shape[:start]
-    right = shape[end:]
-    return left, right
+def test_array_is_reflexive() -> None:
+    """ Make sure ``Array[<args>] == Array[<args>]``. """
+    # pylint: disable=comparison-with-itself
+    assert Array == Array
+    assert Array[int] == Array[int]
+    assert Array[float] != Array[int]
+    assert Array[1, 2, 3] == Array[1, 2, 3]
+    assert Array[1, 2, 3] != Array[1, 2, 4]
+    assert Array[int, 1, 2, 3] == Array[int, 1, 2, 3]
+    assert Array[int, 1, 2, 3] != Array[str, 1, 2, 3]
+    assert Array[int, 1, 2, 3] != Array[int, 1, 2, 4]
 
 
 def test_array_fails_instantiation() -> None:

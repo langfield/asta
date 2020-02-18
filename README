@@ -9,6 +9,8 @@ Todo
 ----
 - Add ``# type: ignore`` comments in test files. The ``[type-arg]`` and
   ellipses errors will be ignored when the package is installed. They just need
-  to be silenced within the package itself.
-- Delete ``demo.py``.
-- Implement ``-1`` wildcard shape element suppport.
+  to be silenced within the package itself. (DONE)
+- Delete ``demo.py``. (DONE)
+- Implement ``-1`` wildcard shape element suppport. (DONE)
+- Add tests for ``Tensor``.
+- Write examples in README.

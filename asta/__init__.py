@@ -2,4 +2,5 @@
 # -*- coding: utf-8 -*-
 """ Top-level typing classes. """
 from asta.array import Array
+from asta.tensor import Tensor
 from asta.scalar import Scalar

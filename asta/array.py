@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 """ Support for typing Numpy ndarrays. """
 import numpy as np
-from asta._array_meta import _Array
+from asta._array import _Array
 
 
 class Array(_Array, np.ndarray):
+    # TODO: Update examples.
     """
     A subclass of ``np.ndarray`` for use in type annotations.
 
@@ -26,5 +27,4 @@ class Array(_Array, np.ndarray):
 
     Example of an array with a defined generic type and shape (rows and cols):
         ``Array[int, 3, 2]``
-
     """
