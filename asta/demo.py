@@ -1,10 +1,12 @@
 from typing import Any, TypeVar
 from functools import lru_cache
 
+import numpy as np
+
 T = TypeVar("T")
 
 
-class SubscriptableType(type):
+class SubscriptableType(type, Generic[T]):
     """ Generic metaclass for subscriptable type. """
 
     def __init_subclass__(cls) -> None:
@@ -39,7 +41,10 @@ class SubscriptableType(type):
 
 
 class AMeta(SubscriptableType):
-    pass
+    @lru_cache()
+    def __getitem__(cls, item: Any) -> type:
+        """ Defer to ``typish``, which calls ``cls._after_subscription()``. """
+        return SubscriptableType.__getitem__(cls, item)
 
 
 class AType(metaclass=AMeta):
@@ -58,7 +63,12 @@ def function_3(x: AType[None]) -> AType[None]:
     return x
 
 
+def function_4(x: AType[None, None]) -> AType[None]:
+    return x
+
+
 def main() -> None:
     x = 0
     isinstance(x, AType[int])
+    isinstance(x, AType[int, int])
     isinstance(x, AType[...])

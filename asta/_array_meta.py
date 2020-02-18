@@ -6,7 +6,9 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 from functools import lru_cache
 
 import numpy as np
-from typish import SubscriptableType
+
+# from typish import SubscriptableType
+from asta.demo import SubscriptableType
 from typish._types import Ellipsis_, NoneType
 
 
@@ -54,10 +56,14 @@ def split(
 class _ArrayMeta(SubscriptableType):
     """ A meta class for the ``Array`` class. """
 
+    kind: str
+    shape: tuple
+    dtype: np.dtype
+
     @lru_cache()
     def __getitem__(cls, item: Any) -> type:
         """ Defer to ``typish``, which calls ``cls._after_subscription()``. """
-        return SubscriptableType.__getitem__(cls, item)  # type: ignore
+        return SubscriptableType.__getitem__(cls, item)
 
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<array>, Array[<args>])``. """
