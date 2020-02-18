@@ -9,64 +9,11 @@ import numpy as np
 
 # from typish import SubscriptableType
 from asta._classes import SubscriptableMeta, SubscriptableType
+from asta.utils import is_subtuple, split, wildcard_eq
 from typish._types import Ellipsis_, NoneType
 
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
-
-
-def is_subtuple(
-    sub: Tuple[Union[int, Ellipsis_], ...], tup: Tuple[Union[int, Ellipsis_], ...]
-) -> Tuple[bool, int]:
-    """ Check for tuple inclusion, return index of first one. """
-    assert isinstance(sub, tuple)
-    assert isinstance(tup, tuple)
-    for i in range(len(tup) - len(sub) + 1):
-        if wildcard_eq(sub, tup[i : i + len(sub)]):
-            return True, i
-    return False, -1
-
-
-def split(
-    shape: Tuple[Union[int, Ellipsis_], ...], elem: Union[int, Ellipsis_]
-) -> List[Tuple[int, ...]]:
-    """ Split on an element. """
-    shape_list = list(shape)
-    tokens: List[str] = []
-    for num in shape_list:
-        if num == elem:
-            tokens.append("@")
-        else:
-            assert isinstance(num, int)
-            tokens.append(str(num))
-    seq: str = ",".join(tokens)
-    comma_fragments: List[str] = seq.split("@")
-
-    result: List[Tuple[int, ...]] = []
-    for frag in comma_fragments:
-        if frag:
-            frag_tokens = [token for token in frag.split(",") if token]
-            frag_nums = [int(token) for token in frag_tokens]
-            frag_tuple = tuple(frag_nums)
-            result.append(frag_tuple)
-
-    return result
-
-
-def wildcard_eq(shape_1: Tuple[int, ...], shape_2: Tuple[int, ...]) -> bool:
-    """ Determines if two shape tuples are equal, allowing wildcards (``-1``). """
-    if len(shape_1) != len(shape_2):
-        return False
-    for elem_1, elem_2 in zip(shape_1, shape_2):
-        if (
-            isinstance(elem_1, int)
-            and isinstance(elem_2, int)
-            and (elem_1 == -1 or elem_2 == -1)
-        ):
-            continue
-        if elem_1 != elem_2:
-            return False
-    return True
 
 
 class _ArrayMeta(SubscriptableMeta):
@@ -215,7 +162,7 @@ class _Array(metaclass=_ArrayMeta):
         return dtype, kind
 
     @staticmethod
-    def get_shape(item: Tuple,) -> Optional[Tuple]:
+    def get_shape(item: Tuple) -> Optional[Tuple]:
         """ Compute shape from a shape tuple argument. """
         shape: Optional[Tuple] = None
         if item:
