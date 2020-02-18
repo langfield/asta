@@ -22,7 +22,7 @@ def is_subtuple(
     assert isinstance(sub, tuple)
     assert isinstance(tup, tuple)
     for i in range(len(tup) - len(sub) + 1):
-        if sub == tup[i : i + len(sub)]:
+        if wildcard_eq(sub, tup[i : i + len(sub)]):
             return True, i
     return False, -1
 
@@ -51,6 +51,22 @@ def split(
             result.append(frag_tuple)
 
     return result
+
+
+def wildcard_eq(shape_1: Tuple[int, ...], shape_2: Tuple[int, ...]) -> bool:
+    """ Determines if two shape tuples are equal, allowing wildcards (``-1``). """
+    if len(shape_1) != len(shape_2):
+        return False
+    for elem_1, elem_2 in zip(shape_1, shape_2):
+        if (
+            isinstance(elem_1, int)
+            and isinstance(elem_2, int)
+            and (elem_1 == -1 or elem_2 == -1)
+        ):
+            continue
+        if elem_1 != elem_2:
+            return False
+    return True
 
 
 class _ArrayMeta(SubscriptableMeta):
@@ -86,7 +102,7 @@ class _ArrayMeta(SubscriptableMeta):
             # Handle ellipses.
             elif cls.shape is not None:
                 if Ellipsis not in cls.shape and -1 not in cls.shape:
-                    if cls.shape != inst.shape:
+                    if not wildcard_eq(cls.shape, inst.shape):
                         match = False
                 elif inst.shape == tuple() != cls.shape:
                     match = False
