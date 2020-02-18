@@ -4,3 +4,11 @@
 
 Shape annotations for homogeneous numpy arrays and pytorch tensors.
 Based on the excellent 'nptyping' package by Ramon Hagenaars.
+
+Todo
+----
+- Add ``# type: ignore`` comments in test files. The ``[type-arg]`` and
+  ellipses errors will be ignored when the package is installed. They just need
+  to be silenced within the package itself.
+- Delete ``demo.py``.
+- Implement ``-1`` wildcard shape element suppport.
