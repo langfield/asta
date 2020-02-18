@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# type: ignore
 """ Tests for the 'Array' typing class. """
 import random
 from typing import Tuple, List
@@ -116,11 +117,11 @@ def test_array_handles_invalid_ellipsis_shapes(arr: Array) -> None:
     if arr.shape:
         left, right = rand_split_shape(arr.shape)
         with pytest.raises(TypeError):
-            Array[left + (..., ...)]
+            _ = Array[left + (..., ...)]
         with pytest.raises(TypeError):
-            Array[(..., ...) + right]
+            _ = Array[(..., ...) + right]
         with pytest.raises(TypeError):
-            Array[(..., ...)]
+            _ = Array[(..., ...)]
 
 
 @given(st.data())
