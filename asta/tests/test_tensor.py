@@ -9,11 +9,11 @@ import pytest
 import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 from hypothesis import given, assume
-from typish._types import NoneType
 
 from asta import Tensor
 from asta.utils import rand_split_shape
 from asta.tests import strategies as strats
+from asta.constants import NoneType
 
 # pylint: disable=no-value-for-parameter
 

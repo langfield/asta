@@ -20,3 +20,4 @@ Todo
 - Add an option to disable typechecked decorator (default=disabled, ``.astarc`` file).
 - Add tests for ``@typechecked``.
 - Consider changing name of decorator to ``@shapechecked``.
+- Consider dropping the ``Scalar`` object. The less unfamiliar objects, the better.

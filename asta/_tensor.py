@@ -2,14 +2,12 @@
 # -*- coding: utf-8 -*-
 """ This module contains meta functionality for the ``Tensor`` type. """
 from typing import List, Optional, Any, Tuple, Dict, Union
-from functools import lru_cache
 
 import torch
 
-# from typish import SubscriptableType
-from asta._classes import SubscriptableMeta, SubscriptableType
 from asta.utils import is_subtuple, split, wildcard_eq
-from typish._types import Ellipsis_, NoneType
+from asta.classes import SubscriptableMeta, SubscriptableType
+from asta.constants import NoneType, EllipsisType
 
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
@@ -21,9 +19,8 @@ class _TensorMeta(SubscriptableMeta):
     shape: tuple
     dtype: torch.dtype
 
-    @lru_cache()
     def __getitem__(cls, item: Any) -> SubscriptableType:
-        """ Defer to ``typish``, which calls ``cls._after_subscription()``. """
+        """ Defer to the metaclass which calls ``cls._after_subscription()``. """
         return SubscriptableMeta.__getitem__(cls, item)
 
     def __instancecheck__(cls, inst: Any) -> bool:
@@ -33,6 +30,9 @@ class _TensorMeta(SubscriptableMeta):
         match = False
         if isinstance(inst, torch.Tensor):
             match = True  # In case of an empty tensor.
+
+            print("Cls dtype:", cls.dtype)
+            print("inst dtype:", inst.dtype)
 
             # If we have ``cls.dtype``, we can be maximally precise.
             if cls.dtype and cls.dtype != inst.dtype:
@@ -108,7 +108,7 @@ class _TensorMeta(SubscriptableMeta):
 class _Tensor(metaclass=_TensorMeta):
     """ This class exists to keep the Tensor class as clean as possible. """
 
-    _DIM_TYPES: List[type] = [int, Ellipsis_, NoneType]
+    _DIM_TYPES: List[type] = [int, EllipsisType, NoneType]  # type: ignore[misc]
     _GENERIC_TYPES: List[type] = [
         bool,
         int,
@@ -166,7 +166,7 @@ class _Tensor(metaclass=_TensorMeta):
 
     @classmethod
     def _after_subscription(
-        cls, item: Union[type, Optional[Union[int, Ellipsis_]]]
+        cls, item: Union[type, Optional[Union[int, EllipsisType]]],  # type: ignore
     ) -> None:
         """ Set class attributes based on the passed dtype/dim data. """
 

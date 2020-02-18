@@ -3,14 +3,12 @@
 """ This module contains meta functionality for the ``Array`` type. """
 import datetime
 from typing import List, Optional, Any, Tuple, Dict, Union
-from functools import lru_cache
 
 import numpy as np
 
-# from typish import SubscriptableType
-from asta._classes import SubscriptableMeta, SubscriptableType
 from asta.utils import is_subtuple, split, wildcard_eq
-from typish._types import Ellipsis_, NoneType
+from asta.classes import SubscriptableMeta, SubscriptableType
+from asta.constants import NoneType, EllipsisType
 
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
@@ -23,7 +21,6 @@ class _ArrayMeta(SubscriptableMeta):
     shape: tuple
     dtype: np.dtype
 
-    @lru_cache()
     def __getitem__(cls, item: Any) -> SubscriptableType:
         """ Defer to ``typish``, which calls ``cls._after_subscription()``. """
         return SubscriptableMeta.__getitem__(cls, item)
@@ -116,7 +113,7 @@ class _ArrayMeta(SubscriptableMeta):
 class _Array(metaclass=_ArrayMeta):
     """ This class exists to keep the Array class as clean as possible. """
 
-    _DIM_TYPES: List[type] = [int, Ellipsis_, NoneType]
+    _DIM_TYPES: List[type] = [int, EllipsisType, NoneType]  # type: ignore[misc]
     _GENERIC_TYPES: List[type] = [
         bool,
         int,
@@ -179,7 +176,7 @@ class _Array(metaclass=_ArrayMeta):
 
     @classmethod
     def _after_subscription(
-        cls, item: Union[type, Optional[Union[int, Ellipsis_]]]
+        cls, item: Union[type, Optional[Union[int, EllipsisType]]]  # type: ignore
     ) -> None:
         """ Set class attributes based on the passed dtype/dim data. """
 

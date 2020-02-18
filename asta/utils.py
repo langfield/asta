@@ -5,11 +5,12 @@ import random
 from typing import List, Tuple, Union
 
 import torch
-from typish import Ellipsis_
+from asta.constants import EllipsisType
 
 
 def is_subtuple(
-    sub: Tuple[Union[int, Ellipsis_], ...], tup: Tuple[Union[int, Ellipsis_], ...]
+    sub: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
+    tup: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
 ) -> Tuple[bool, int]:
     """ Check for tuple inclusion, return index of first one. """
     assert isinstance(sub, tuple)
@@ -21,7 +22,8 @@ def is_subtuple(
 
 
 def split(
-    shape: Tuple[Union[int, Ellipsis_], ...], elem: Union[int, Ellipsis_]
+    shape: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
+    elem: Union[int, EllipsisType],  # type: ignore[valid-type]
 ) -> List[Tuple[int, ...]]:
     """ Split on an element. """
     shape_list = list(shape)
@@ -47,8 +49,8 @@ def split(
 
 
 def wildcard_eq(
-    shape_1: Tuple[Union[int, Ellipsis_], ...],
-    shape_2: Tuple[Union[int, Ellipsis_], ...],
+    shape_1: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
+    shape_2: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
 ) -> bool:
     """ Determines if two shape tuples are equal, allowing wildcards (``-1``). """
     if len(shape_1) != len(shape_2):
