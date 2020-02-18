@@ -6,7 +6,6 @@ This module contains class implementations.
 import types
 from abc import ABC, abstractmethod
 from typing import TypeVar, Generic, Any
-from functools import lru_cache
 
 # pylint: disable=too-few-public-methods
 
@@ -44,7 +43,6 @@ class SubscriptableMeta(type, Generic[T]):
         cls.__args__ = None
         cls.__origin__ = None
 
-    @lru_cache()
     def __getitem__(cls, item: Any) -> SubscriptableType:
         body = {
             **cls.__dict__,
@@ -52,6 +50,7 @@ class SubscriptableMeta(type, Generic[T]):
             "__origin__": cls,
         }
         bases = cls, *cls.__bases__
+        print("Cls name is:", cls.__name__)
         result: SubscriptableType = type(cls.__name__, bases, body)  # type: ignore
         if hasattr(result, "_after_subscription"):
 
