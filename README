@@ -14,3 +14,4 @@ Todo
 - Implement ``-1`` wildcard shape element suppport. (DONE)
 - Add tests for ``Tensor``.
 - Write examples in README.
+- Add tests for empty arrays and tensors.

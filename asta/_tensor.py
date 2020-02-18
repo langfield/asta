@@ -33,11 +33,9 @@ class _TensorMeta(SubscriptableMeta):
         match = False
         if isinstance(inst, torch.Tensor):
             match = True  # In case of an empty tensor.
-            if inst.dtype.names:
-                match = False
 
             # If we have ``cls.dtype``, we can be maximally precise.
-            elif cls.dtype and cls.dtype != inst.dtype:
+            if cls.dtype and cls.dtype != inst.dtype:
                 match = False
 
             # Handle ellipses.

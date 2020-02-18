@@ -136,7 +136,6 @@ def test_array_handles_wildcard_shapes(data: st.DataObject) -> None:
             rep_seq.append(dim)
     arr = data.draw(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=tuple(rep_seq)))
     shape = tuple(seq)
-    print("Shape:", shape)
     assert isinstance(arr, Array[shape])
 
 
@@ -170,7 +169,6 @@ def test_array_fails_wild_wildcards(data: st.DataObject) -> None:
     seq[bad_index] = rep_seq[bad_index] + delta
     arr = data.draw(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=tuple(rep_seq)))
     shape = tuple(seq)
-    print("Shape:", shape)
     assert not isinstance(arr, Array[shape])
 
 
