@@ -31,6 +31,7 @@ def typechecked(decorated: Callable[[Any], Any]) -> Callable[[Any], Any]:
 
     def _wrapper(*args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         """ Decorated/typechecked function. """
+
         for i, arg in enumerate(args):
             param = sig.parameters[param_names[i]]
             if isinstance(param.annotation, (_ArrayMeta, _TensorMeta)):
@@ -39,6 +40,15 @@ def typechecked(decorated: Callable[[Any], Any]) -> Callable[[Any], Any]:
                     type_err += f"has wrong type. Expected type: '{param.annotation}' "
                     type_err += f"Actual type: '{type(arg)}'"
                     raise TypeError(type_err)
-        return decorated(*args, **kwargs)  # type: ignore[call-arg]
+
+        ret = decorated(*args, **kwargs)  # type: ignore[call-arg]
+        if isinstance(sig.return_annotation, (_ArrayMeta, _TensorMeta)):
+            if not isinstance(ret, sig.return_annotation):
+                type_err = f"Return value '{ret}' has wrong type. "
+                type_err += f"Expected type: '{sig.return_annotation}' "
+                type_err += f"Actual type: '{type(ret)}'"
+                raise TypeError(type_err)
+
+        return ret
 
     return _wrapper

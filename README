@@ -17,7 +17,11 @@ Todo
 - Add tests for empty arrays and tensors.
 - Add reprs.
 - Fix tensor strategy.
-- Add an option to disable typechecked decorator (default=disabled, ``.astarc`` file).
+- Add an option to disable typechecked decorator (default=disabled, ``.astarc``
+  file).
 - Add tests for ``@typechecked``.
 - Consider changing name of decorator to ``@shapechecked``.
-- Consider dropping the ``Scalar`` object. The less unfamiliar objects, the better.
+- Consider dropping the ``Scalar`` object. The less unfamiliar objects, the
+  better.
+- Add more descriptive error if you pass torch dtype for an Array or numpy
+  dtype for a Tensor.

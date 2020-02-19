@@ -8,7 +8,11 @@ import numpy as np
 
 from asta.utils import is_subtuple, split, wildcard_eq
 from asta.classes import SubscriptableMeta, SubscriptableType
-from asta.constants import NoneType, EllipsisType
+from asta.constants import (
+    EllipsisType,
+    DIM_TYPES,
+    NP_UNSIZED_TYPE_KINDS,
+)
 
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
@@ -113,19 +117,9 @@ class _ArrayMeta(SubscriptableMeta):
 class _Array(metaclass=_ArrayMeta):
     """ This class exists to keep the Array class as clean as possible. """
 
-    _DIM_TYPES: List[type] = [int, EllipsisType, NoneType]  # type: ignore[misc]
-    _GENERIC_TYPES: List[type] = [
-        bool,
-        int,
-        float,
-        complex,
-        bytes,
-        str,
-        object,
-        np.datetime64,
-        np.timedelta64,
-    ]
-    _UNSIZED_TYPE_KINDS: Dict[type, str] = {bytes: "S", str: "U", object: "O"}
+    _DIM_TYPES: List[type] = DIM_TYPES
+    _UNSIZED_TYPE_KINDS: Dict[type, str] = NP_UNSIZED_TYPE_KINDS
+
     kind: str = ""
     dtype: Optional[np.dtype] = None
     shape: Optional[Tuple] = None
