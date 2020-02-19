@@ -13,22 +13,93 @@ as argument(s) numpy ndarrays or pytorch tensors. It also adds a decorator,
 ``@typechecked``, which implements toggleable static type enforcement for the
 classes described above.
 
+Asta supports checking dtypes and shapes:
+
+>>> def fn(arr: Array[float, 1, 2, 3]):
+>>>     pass
+
+(Allows np.ndarrays with dtype ``np.float64`` and shape ``(1, 2, 3)``)
+
+Or dtypes only:
+
+>>> def fn(arr: Array[float]):
+>>>     pass
+
+(Allows np.ndarrays with dtype ``np.float64``)
+
+Or shapes only:
+
+>>> def fn(arr: Array[1, 2, 3]):
+>>>     pass
+
+(Allows np.ndarrays with shape ``(1, 2, 3)``)
+
+To specify scalar arrays/tensors, use ``None``:
+
+>>> def fn(arr: Array[int, None]):
+>>>     pass
+
+(Allows scalar np.ndarrays of type ``np.int64``)
+
+You can also pass ellipses and wildcard dimensions:
+
+>>> def fn(arr: Array[str, 1, 2, ..., 3]):
+>>>     pass
+
+(Allows unicode ``np.dtype("<U")`` np.ndarrays whose first two dimensions have
+size 1 and 2, and whose last dimension has size 3.)
+
+>>> def fn(arr: Array[str, 1, 2, -1, 3]):
+>>>     pass
+
+(Allows unicode ``np.dtype("<U")`` np.ndarrays with shape ``(1, 2, *, 3)``,
+where ``*`` can be any positive integer)
+
+Performance
+-----------
+The runtime checking functionality of asta is NOT meant to be used in
+situations where performance/speed is critical. Furthermore, use of the values
+of type hints within python code, which ``@typechecked`` decorator relies on,
+is not recommended; the ability to type hint in python is meant to be just
+that, a hint. The usefulness of using the decorator is as a debugging or
+testing step when working on large, complicated models or workflows. Many of
+the native numpy and pytorch array/tensor functions allow arbitrary shaped
+inputs, and it is easy for a malformed shape to pass unnoticed, with no effects
+other than poor downstream performance or results. This having been said, the
+``isinstance()`` checks used are relatively cheap, and shouldn't cause a
+serious slowdown outside of exceptional cases.
+
+The recommended usage of this library would be to annotate all critical
+functions which take or return ndarrays/tensors, and decorate them with
+``@typechecked``. One could then add a CI test which sets the
+``ASTA_TYPECHECK`` environment variable to ``1`` and runs a sample workflow.
+Any incorrect dtypes or malformed shapes will raise a TypeError, and typechecks
+which pass will print to stdout. This behavior is intentional, and meant to
+help researchers avoid silent performance degradation due to leaving the
+environment variable set, which will cause a slight slowdown which would
+otherwise occur silently.
+
 Example
 -------
-```
-import os
-import torch.nn.functional as F
-from asta import Tensor, typechecked
+The following gives an example of using the ``@typechecked`` decorator to
+enforce torch tensor shapes and dtypes at runtime. The function ``kl`` will
+raise a TypeError if called with inputs which have any dtype other than
+``torch.float32``, or any shape other than ``(8, 64)``.
 
-os.environ["ASTA_TYPECHECK"] = "1"
+A runnable example is given in ``example.py`` in the repository root.
 
-
-@typechecked
-def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[float, None]:
-    """ Computes the KL divergence of two FloatTensors of shape ``(8, 64)``. """
-    divergence = F.kl_div(t_1, t_2, reduction="sum")
-    return divergence
-```
+>>> import os
+>>> import torch.nn.functional as F
+>>> from asta import Tensor, typechecked
+>>> 
+>>> os.environ["ASTA_TYPECHECK"] = "1"
+>>> 
+>>> 
+>>> @typechecked
+>>> def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[float, None]:
+>>>     """ Computes the KL divergence of two FloatTensors of shape ``(8, 64)``. """
+>>>     divergence = F.kl_div(t_1, t_2, reduction="sum")
+>>>     return divergence
 
 Todo
 ----
@@ -38,14 +109,15 @@ Todo
 - Delete ``demo.py``. (DONE)
 - Implement ``-1`` wildcard shape element suppport. (DONE)
 - Add tests for ``Tensor``. (DONE)
-- Write examples in README.
+- Write examples in README. (DONE)
 - Add tests for empty arrays and tensors.
-- Add reprs.
+- Add reprs. (DONE)
 - Fix tensor strategy.
 - Add an option to disable typechecked decorator (default=disabled, ``.astarc``
   file).
+- Add environment variable for typechecking. (DONE)
 - Add tests for ``@typechecked``. (DONE)
-- Consider changing name of decorator to ``@shapechecked``.
+- Consider changing name of decorator to ``@shapechecked``. (NO)
 - Consider dropping the ``Scalar`` object. The less unfamiliar objects, the
   better.
 - Add more descriptive error if you pass torch dtype for an Array or numpy
