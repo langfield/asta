@@ -5,6 +5,31 @@
 Shape annotations for homogeneous numpy arrays and pytorch tensors.
 Based on the excellent 'nptyping' package by Ramon Hagenaars.
 
+Usage
+-----
+This library defines two subscriptable classes, ``Array`` and ``Tensor``, whose
+purpose is to facilitate type and/or shape annotations of functions which take
+as argument(s) numpy ndarrays or pytorch tensors. It also adds a decorator,
+``@typechecked``, which implements toggleable static type enforcement for the
+classes described above.
+
+Example
+-------
+```
+import os
+import torch.nn.functional as F
+from asta import Tensor, typechecked
+
+os.environ["ASTA_TYPECHECK"] = "1"
+
+
+@typechecked
+def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[float, None]:
+    """ Computes the KL divergence of two FloatTensors of shape ``(8, 64)``. """
+    divergence = F.kl_div(t_1, t_2, reduction="sum")
+    return divergence
+```
+
 Todo
 ----
 - Add ``# type: ignore`` comments in test files. The ``[type-arg]`` and
@@ -19,9 +44,10 @@ Todo
 - Fix tensor strategy.
 - Add an option to disable typechecked decorator (default=disabled, ``.astarc``
   file).
-- Add tests for ``@typechecked``.
+- Add tests for ``@typechecked``. (DONE)
 - Consider changing name of decorator to ``@shapechecked``.
 - Consider dropping the ``Scalar`` object. The less unfamiliar objects, the
   better.
 - Add more descriptive error if you pass torch dtype for an Array or numpy
   dtype for a Tensor.
+- Add ``CudaTensor`` class.

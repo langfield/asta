@@ -35,9 +35,6 @@ class _TensorMeta(SubscriptableMeta):
         if isinstance(inst, torch.Tensor):
             match = True  # In case of an empty tensor.
 
-            print("Cls dtype:", cls.dtype)
-            print("inst dtype:", inst.dtype)
-
             # If we have ``cls.dtype``, we can be maximally precise.
             if cls.dtype and cls.dtype != inst.dtype:
                 match = False

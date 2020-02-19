@@ -5,3 +5,4 @@ logs/
 models/
 .hypothesis/
 .coverage
+*.egg-info

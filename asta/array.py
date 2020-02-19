@@ -6,7 +6,6 @@ from asta._array import _Array
 
 
 class Array(_Array, np.ndarray):
-    # TODO: Update examples.
     """
     A subclass of ``np.ndarray`` for use in type annotations.
 
@@ -16,15 +15,19 @@ class Array(_Array, np.ndarray):
     Example of an array with a defined generic type:
         ``Array[int]``
 
-    Example of an array with a defined generic type and shape (rows):
-        ``Array[int, 3]``
-        ``Array[int, 3, ...]``
-        ``Array[int, 3, None]``
+    Example of an array with a defined numpy dtype:
+        ``Array[np.int32]``
 
-    Examples of an array with a defined generic type and shape (cols):
-        ``Array[int, None, 2]``
-        ``Array[int, ..., 2]``
+    Example of an array with a defined numpy dtype and shape:
+        ``Array[np.int32, 3]``
+        ``Array[np.int64, 1, 2, 3]``
 
-    Example of an array with a defined generic type and shape (rows and cols):
-        ``Array[int, 3, 2]``
+    Example of an array with wildcard dimension.
+        ``Array[-1]``
+        ``Array[int, 1, 2, -1, 3]``
+
+    Example of an array with ellipses.
+        ``Array[...]``
+        ``Array[int, ...]``
+        ``Array[int, 1, 2, ...]``
     """
