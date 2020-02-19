@@ -1,9 +1,6 @@
 """ Scalar type class for use in annotating scalar ``Array`` types. """
-import datetime
 from typing import Any, List
-
-import torch
-import numpy as np
+from asta.constants import GENERIC_TYPES, ARRAY_TYPES
 
 # pylint: disable=too-few-public-methods
 
@@ -31,14 +28,5 @@ class _ScalarMeta(type):
 class Scalar(metaclass=_ScalarMeta):
     """ A generic scalar type class. """
 
-    _GENERIC_TYPES: List[type] = [
-        bool,
-        int,
-        float,
-        complex,
-        bytes,
-        str,
-        datetime.datetime,
-        datetime.timedelta,
-    ]
-    _ARRAY_TYPES: List[type] = [np.ndarray, torch.Tensor]
+    _GENERIC_TYPES: List[type] = GENERIC_TYPES
+    _ARRAY_TYPES: List[type] = ARRAY_TYPES

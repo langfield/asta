@@ -7,7 +7,11 @@ import torch
 
 from asta.utils import is_subtuple, split, wildcard_eq
 from asta.classes import SubscriptableMeta, SubscriptableType
-from asta.constants import NoneType, EllipsisType
+from asta.constants import (
+    EllipsisType,
+    DIM_TYPES,
+    TORCH_DTYPE_MAP,
+)
 
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
@@ -108,19 +112,9 @@ class _TensorMeta(SubscriptableMeta):
 class _Tensor(metaclass=_TensorMeta):
     """ This class exists to keep the Tensor class as clean as possible. """
 
-    _DIM_TYPES: List[type] = [int, EllipsisType, NoneType]  # type: ignore[misc]
-    _GENERIC_TYPES: List[type] = [
-        bool,
-        int,
-        float,
-        bytes,
-    ]
-    _TORCH_DTYPE_MAP: Dict[type, torch.dtype] = {
-        int: torch.int32,
-        float: torch.float32,
-        bool: torch.bool,
-        bytes: torch.uint8,
-    }
+    _DIM_TYPES: List[type] = DIM_TYPES
+    _TORCH_DTYPE_MAP: Dict[type, torch.dtype] = TORCH_DTYPE_MAP
+
     dtype: Optional[torch.dtype] = None
     shape: Optional[Tuple] = None
 
