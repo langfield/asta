@@ -5,14 +5,13 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 
 import torch
 
-from asta.utils import is_subtuple, split, wildcard_eq
+from asta.utils import is_subtuple, split, wildcard_eq, get_shape_rep
 from asta.classes import SubscriptableMeta, SubscriptableType
 from asta.constants import (
     EllipsisType,
     DIM_TYPES,
     TORCH_DTYPE_MAP,
 )
-
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
 
@@ -26,6 +25,23 @@ class _TensorMeta(SubscriptableMeta):
     def __getitem__(cls, item: Any) -> SubscriptableType:
         """ Defer to the metaclass which calls ``cls._after_subscription()``. """
         return SubscriptableMeta.__getitem__(cls, item)
+
+    def __repr__(cls) -> str:
+        """ String representation of ``Tensor`` class. """
+        assert hasattr(cls, "shape")
+        assert hasattr(cls, "dtype")
+        if cls.shape is None and cls.dtype is None:
+            rep = f"<asta.Tensor>"
+        elif cls.shape is None and cls.dtype is not None:
+            rep = f"<asta.Tensor[{cls.dtype}]>"
+        elif cls.shape is not None and cls.dtype is None:
+            shape_rep = get_shape_rep(cls.shape)
+            rep = f"<asta.Tensor[{shape_rep}]>"
+        else:
+            shape_rep = get_shape_rep(cls.shape)
+            rep = f"<asta.Tensor[{cls.dtype}, {shape_rep}]>"
+
+        return rep
 
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<tensor>, Tensor[<args>])``. """

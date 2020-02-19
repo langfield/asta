@@ -6,14 +6,13 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 
 import numpy as np
 
-from asta.utils import is_subtuple, split, wildcard_eq
+from asta.utils import is_subtuple, split, wildcard_eq, get_shape_rep
 from asta.classes import SubscriptableMeta, SubscriptableType
 from asta.constants import (
     EllipsisType,
     DIM_TYPES,
     NP_UNSIZED_TYPE_KINDS,
 )
-
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
 
@@ -28,6 +27,23 @@ class _ArrayMeta(SubscriptableMeta):
     def __getitem__(cls, item: Any) -> SubscriptableType:
         """ Defer to ``typish``, which calls ``cls._after_subscription()``. """
         return SubscriptableMeta.__getitem__(cls, item)
+
+    def __repr__(cls) -> str:
+        """ String representation of ``Array`` class. """
+        assert hasattr(cls, "shape")
+        assert hasattr(cls, "dtype")
+        if cls.shape is None and cls.dtype is None:
+            rep = f"<asta.Array>"
+        elif cls.shape is None and cls.dtype is not None:
+            rep = f"<asta.Array[{cls.dtype}]>"
+        elif cls.shape is not None and cls.dtype is None:
+            shape_rep = get_shape_rep(cls.shape)
+            rep = f"<asta.Array[{shape_rep}]>"
+        else:
+            shape_rep = get_shape_rep(cls.shape)
+            rep = f"<asta.Array[{cls.dtype}, {shape_rep}]>"
+
+        return rep
 
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<array>, Array[<args>])``. """

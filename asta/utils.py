@@ -78,3 +78,16 @@ def rand_split_shape(
     left = shape[:start]
     right = shape[end:]
     return left, right
+
+
+def get_shape_rep(shape: Tuple[int, ...]) -> str:
+    """ Get stripped representation of a shape. """
+    if shape == ():
+        rep = f"Scalar"
+    elif len(shape) == 1:
+        rep = f"{shape[0]}"
+    else:
+        rep = repr(shape).strip("(").strip(")")
+    rep = rep.replace("Ellipsis", "...")
+
+    return rep

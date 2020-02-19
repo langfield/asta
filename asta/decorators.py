@@ -5,13 +5,13 @@ This module contains decorators.
 """
 import os
 import inspect
-from typing import Callable, Any, Tuple, Dict
+from typing import Any, Tuple, Dict
 
 from asta._array import _ArrayMeta
 from asta._tensor import _TensorMeta
 
 
-def typechecked(decorated): # type: ignore[no-untyped-def]
+def typechecked(decorated):  # type: ignore[no-untyped-def]
     """
     Typecheck a function annotated with ``asta`` type objects. This decorator will only
     check the shape and datatype of parameters annotated with ``asta`` type variables.
@@ -52,6 +52,6 @@ def typechecked(decorated): # type: ignore[no-untyped-def]
 
         return ret
 
-    if os.environ["ASTA_TYPECHECK"] == "1":
+    if "ASTA_TYPECHECK" in os.environ and os.environ["ASTA_TYPECHECK"] == "1":
         return _wrapper
     return decorated
