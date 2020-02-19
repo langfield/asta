@@ -1,10 +1,12 @@
 # type: ignore
 """ Test the ``asta.typechecked`` decorator. """
+import os
 import torch
 import pytest
 import numpy as np
 from asta import Array, Tensor, typechecked
 
+os.environ["ASTA_TYPECHECK"] = "1"
 
 @typechecked
 def np_correct_type(arr: Array[int]) -> Array[int]:
