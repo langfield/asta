@@ -3,6 +3,7 @@ PRIVATE MODULE: do not import (from) it directly.
 
 This module contains decorators.
 """
+import os
 import inspect
 from typing import Callable, Any, Tuple, Dict
 
@@ -10,7 +11,7 @@ from asta._array import _ArrayMeta
 from asta._tensor import _TensorMeta
 
 
-def typechecked(decorated: Callable[[Any], Any]) -> Callable[[Any], Any]:
+def typechecked(decorated): # type: ignore[no-untyped-def]
     """
     Typecheck a function annotated with ``asta`` type objects. This decorator will only
     check the shape and datatype of parameters annotated with ``asta`` type variables.
@@ -41,7 +42,7 @@ def typechecked(decorated: Callable[[Any], Any]) -> Callable[[Any], Any]:
                     type_err += f"Actual type: '{type(arg)}'"
                     raise TypeError(type_err)
 
-        ret = decorated(*args, **kwargs)  # type: ignore[call-arg]
+        ret = decorated(*args, **kwargs)
         if isinstance(sig.return_annotation, (_ArrayMeta, _TensorMeta)):
             if not isinstance(ret, sig.return_annotation):
                 type_err = f"Return value '{ret}' has wrong type. "
@@ -51,4 +52,6 @@ def typechecked(decorated: Callable[[Any], Any]) -> Callable[[Any], Any]:
 
         return ret
 
-    return _wrapper
+    if os.environ["ASTA_TYPECHECK"] == "1":
+        return _wrapper
+    return decorated

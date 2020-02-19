@@ -50,7 +50,6 @@ class SubscriptableMeta(type, Generic[T]):
             "__origin__": cls,
         }
         bases = cls, *cls.__bases__
-        print("Cls name is:", cls.__name__)
         result: SubscriptableType = type(cls.__name__, bases, body)  # type: ignore
         if hasattr(result, "_after_subscription"):
 
