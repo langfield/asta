@@ -6,7 +6,7 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 
 import numpy as np
 
-from asta.utils import is_subtuple, split, wildcard_eq, get_shape_rep
+from asta.utils import is_subtuple, get_shape_rep, shapecheck
 from asta.classes import SubscriptableMeta, SubscriptableType
 from asta.constants import (
     EllipsisType,
@@ -65,67 +65,7 @@ class _ArrayMeta(SubscriptableMeta):
 
             # Handle ellipses.
             elif cls.shape is not None:
-                if Ellipsis not in cls.shape and -1 not in cls.shape:
-                    if not wildcard_eq(cls.shape, inst.shape):
-                        match = False
-                elif inst.shape == tuple() != cls.shape:
-                    match = False
-                else:
-                    if is_subtuple((Ellipsis, Ellipsis), cls.shape)[0]:
-                        raise TypeError("Invalid shape: repeated '...'")
-
-                    # Determine if/where '...' bookends ``cls.shape``.
-                    left_bookend = False
-                    right_bookend = False
-                    ellipsis_positions: List[int] = []
-                    for i, elem in enumerate(cls.shape):
-                        if elem == Ellipsis:
-
-                            # e.g. ``Array[..., 1, 2, 3]``.
-                            if i == 0:
-                                left_bookend = True
-
-                            # e.g. ``Array[1, 2, 3, ...]``.
-                            if i == len(cls.shape) - 1:
-                                right_bookend = True
-                            ellipsis_positions.append(i)
-
-                    # Analogous to ``str.split(<elem>)``, we split the shape on '...'.
-                    frags: List[Tuple[int, ...]] = split(cls.shape, Ellipsis)
-
-                    # Cut off end if '...' is there.
-                    ishape = inst.shape
-                    if left_bookend:
-                        ishape = ishape[1:]
-                    if right_bookend:
-                        ishape = ishape[:-1]
-
-                    for i, frag in enumerate(frags):
-                        is_sub, index = is_subtuple(frag, ishape)
-
-                        # Must have ``frag`` contained in ``ishape``.
-                        if not is_sub:
-                            match = False
-                            break
-
-                        # First fragment must start at 0 if '...' is not the first
-                        # element of ``cls.shape``.
-                        if i == 0 and not left_bookend and index != 0:
-                            match = False
-                            break
-
-                        # Last fragement must end at (exclusive) ``len(ishape)`` if
-                        # '...' is not the last element of ``cls.shape``.
-                        if (
-                            i == len(frags) - 1
-                            and not right_bookend
-                            and index + len(frag) != len(ishape)
-                        ):
-                            match = False
-                            break
-
-                        new_start = index + len(frag) + 1
-                        ishape = ishape[new_start:]
+                match = shapecheck(inst.shape, cls.shape)
 
         return match
 

@@ -53,8 +53,28 @@ size 1 and 2, and whose last dimension has size 3.)
 >>> def fn(arr: Array[str, 1, 2, -1, 3]):
 >>>     pass
 
-(Allows unicode ``np.dtype("<U")`` np.ndarrays with shape ``(1, 2, *, 3)``,
+(Allows unicode ``np.dtype("<U")`` np.ndarrays with shape ``(1,2,*,3)``,
 where ``*`` can be any positive integer)
+
+The following gives an example of using the ``@typechecked`` decorator to
+enforce torch tensor shapes and dtypes at runtime. The function ``kl`` will
+raise a TypeError if called with inputs which have any dtype other than
+``torch.float32``, or any shape other than ``(8, 64)``.
+
+A runnable example is given in ``example.py`` in the repository root.
+
+>>> import os
+>>> import torch.nn.functional as F
+>>> from asta import Tensor, typechecked
+>>>
+>>> os.environ["ASTA_TYPECHECK"] = "1"
+>>>
+>>>
+>>> @typechecked
+>>> def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[float, None]:
+>>>     """ Computes the KL divergence of two FloatTensors of shape ``(8, 64)``. """
+>>>     divergence = F.kl_div(t_1, t_2, reduction="sum")
+>>>     return divergence
 
 Subscript arguments
 -------------------
@@ -91,8 +111,8 @@ The valid subscript arguments for ``Array`` and ``Tensor`` are as follows:
     ------
     1. Nonnegative integers.
     2. ``-1``, a wildcard for any positive integer size.
-    3. Ellipses (``...``), a placeholder for any contiguous sequence of sizes,
-    including zero-length sequences, or seqences including zeros.
+    3. Ellipses (``...``), a placeholder for any contiguous sequence of
+    positive integer sizes, including zero-length sequences.
     4. ``None``, indicating a scalar array or tensor.
     5. Omitted (no argument passed).
 
@@ -139,8 +159,8 @@ above, ``x`` is not an instance of ``Array``, while ``y`` is an instance of
 
 Use of the ellipsis placeholder (``...``) in asta is meant to mirror its usage
 in numpy/torch indexing. This is why we allow ``...`` to take the place of an
-emtpy shape, or any shape containing zero-valued sizes. Note that indexing
-scalar arrays with an ellipsis returns the array unchanged:
+emtpy shape. Note that indexing scalar arrays with an ellipsis returns the
+array unchanged:
 
 >>> np.zeros(())
 array(0.)
@@ -161,16 +181,16 @@ array(0.)
 >>> a[...,0,0,0]
 array(0.)
 
-In contrast, we take the ``-1`` wildcard argument to represent only positive
-integer sizes. So if you wanted to all arrays with shape ``(1, *, 1)``, where
-``*`` is nonempty, i.e. don't match arrays of shape ``(1, 1)``, but do match
-any of the following:
+In contrast, we take the ``-1`` wildcard argument to represent only a single
+positive integer shape element. So if you wanted to all arrays with shape
+``(1,*,1)``, where ``*`` is nonempty, i.e. don't match arrays of shape
+``(1,1)``, but do match any of the following:
 
 1. ``(1, 1, 1)``
 2. ``(1, 2, 1)``
 3. ``(1, 2, 3, 4, 5, 1)``
 
-You would use ``Array[1, -1, ..., 1]``.
+You would use ``Array[1,-1,...,1]``.
 
 
 Performance
@@ -199,28 +219,6 @@ help researchers avoid silent performance degradation due to leaving the
 environment variable set, which will cause a slight slowdown which would
 otherwise occur silently.
 
-Example
--------
-The following gives an example of using the ``@typechecked`` decorator to
-enforce torch tensor shapes and dtypes at runtime. The function ``kl`` will
-raise a TypeError if called with inputs which have any dtype other than
-``torch.float32``, or any shape other than ``(8, 64)``.
-
-A runnable example is given in ``example.py`` in the repository root.
-
->>> import os
->>> import torch.nn.functional as F
->>> from asta import Tensor, typechecked
->>>
->>> os.environ["ASTA_TYPECHECK"] = "1"
->>>
->>>
->>> @typechecked
->>> def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[float, None]:
->>>     """ Computes the KL divergence of two FloatTensors of shape ``(8, 64)``. """
->>>     divergence = F.kl_div(t_1, t_2, reduction="sum")
->>>     return divergence
-
 Todo
 ----
 - Add ``# type: ignore`` comments in test files. The ``[type-arg]`` and
@@ -230,11 +228,11 @@ Todo
 - Implement ``-1`` wildcard shape element suppport. (DONE)
 - Add tests for ``Tensor``. (DONE)
 - Write examples in README. (DONE)
-- Add tests for empty arrays and tensors.
+- Add tests for empty arrays and tensors. (DONE)
 - Consider making Ellipses only match empty shapes and positive integer shapes,
   but not zero-valued shapes. This would be done under the assumption that most
   people are not interested in working with empty arrays/tensors. And if they
-  are, they can use the ``.size`` attribute for an easy check.
+  are, they can use the ``.size`` attribute for an easy check. (DONE)
 - Add reprs. (DONE)
 - Fix tensor strategy.
 - Add an option to disable typechecked decorator (default=disabled, ``.astarc``
