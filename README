@@ -3,7 +3,6 @@
 +----+
 
 Shape annotations for homogeneous numpy arrays and pytorch tensors.
-Based on the excellent 'nptyping' package by Ramon Hagenaars.
 
 Usage
 -----
@@ -13,6 +12,8 @@ as argument(s) numpy ndarrays or pytorch tensors. It also adds a decorator,
 ``@typechecked``, which implements toggleable static type enforcement for the
 classes described above.
 
+Examples
+--------
 Asta supports checking dtypes and shapes:
 
 >>> def fn(arr: Array[float, 1, 2, 3]):
@@ -55,6 +56,123 @@ size 1 and 2, and whose last dimension has size 3.)
 (Allows unicode ``np.dtype("<U")`` np.ndarrays with shape ``(1, 2, *, 3)``,
 where ``*`` can be any positive integer)
 
+Subscript arguments
+-------------------
+The valid subscript arguments for ``Array`` and ``Tensor`` are as follows:
+
+    Types
+    -----
+
+        Array
+        -----
+        1. Any python type from the following list:
+            a. int
+            b. float
+            c. bool
+            d. complex
+            e. bytes
+            f. str
+            g. datetime
+            h. timedelta
+        2. Any numpy dtype, e.g. ``np.int64``.
+        3. Omitted (no argument passed).
+
+        Tensor
+        ------
+        1. Any python type from the following list:
+            a. int
+            b. float
+            c. bool
+            d. bytes
+        2. Any ``torch.Tensor``-supported torch dtype, e.g. ``torch.int64``.
+        3. Omitted (no argument passed).
+
+    Shapes
+    ------
+    1. Nonnegative integers.
+    2. ``-1``, a wildcard for any positive integer size.
+    3. Ellipses (``...``), a placeholder for any contiguous sequence of sizes,
+    including zero-length sequences, or seqences including zeros.
+    4. ``None``, indicating a scalar array or tensor.
+    5. Omitted (no argument passed).
+
+Shape constraints and best practices
+------------------------------------
+There is a key difference between the way scalar values are handled in numpy
+and the way they are handled in torch. Consider an array/tensor of shape
+``(2,2,2)``. When indexing the first element along each dimension, which should
+be scalar, we call ``a[0,0,0]``, where ``a`` is our array. We do the same to a
+tensor ``t``, and assign the result to variables ``x`` and ``y``, respectively:
+
+>>> a = np.zeros((2,2,2))
+>>> t = torch.zeros((2,2,2))
+>>> x = a[0,0,0]
+>>> y = t[0,0,0]
+
+What are the types of ``x`` and ``y``?
+
+>>> type(x)
+<class 'numpy.float64'>
+>>> type(y)
+<class 'torch.Tensor'>
+
+Interestingly enough, while ``a`` is of type ``np.ndarray``, ``x`` is of type
+``np.float64``, a subclass of float, while both ``t`` and ``y`` are tensors.
+Note that ``x`` is not an array:
+
+>>> isinstance(x, np.ndarray)
+False
+>>> isinstance(x, float)
+True
+
+And ``y`` is not a float:
+
+>>> isinstance(y, torch.Tensor)
+True
+>>> isinstance(y, float)
+False
+
+Asta does not attempt to rectify this discrepancy, and so the behavior of
+``Array`` and ``Tensor`` when it comes to scalars is slightly different. In the
+above, ``x`` is not an instance of ``Array``, while ``y`` is an instance of
+``Tensor``, even though they are indexed in an identical manner.
+
+Use of the ellipsis placeholder (``...``) in asta is meant to mirror its usage
+in numpy/torch indexing. This is why we allow ``...`` to take the place of an
+emtpy shape, or any shape containing zero-valued sizes. Note that indexing
+scalar arrays with an ellipsis returns the array unchanged:
+
+>>> np.zeros(())
+array(0.)
+>>> a = np.zeros(())
+>>> a[...]
+array(0.)
+
+And adding an Ellipsis anywhere in an already-filled index tuple will return a
+scalar array with the expected value:
+
+>>> a = np.zeros((2,2,2))
+>>> a[0,0,0]
+0.0
+>>> a[0,0,0,...]
+array(0.)
+>>> a[0,0,...,0]
+array(0.)
+>>> a[...,0,0,0]
+array(0.)
+
+In contrast, we take the ``-1`` wildcard argument to represent only positive
+integer sizes. So if you wanted to all arrays with shape ``(1, *, 1)``, where
+``*`` is nonempty, i.e. don't match arrays of shape ``(1, 1)``, but do match
+any of the following:
+
+1. ``(1, 1, 1)``
+2. ``(1, 2, 1)``
+3. ``(1, 2, 3, 4, 5, 1)``
+
+You would use ``Array[1, -1, ..., 1]``.
+
+
 Performance
 -----------
 The runtime checking functionality of asta is NOT meant to be used in
@@ -65,9 +183,11 @@ that, a hint. The usefulness of using the decorator is as a debugging or
 testing step when working on large, complicated models or workflows. Many of
 the native numpy and pytorch array/tensor functions allow arbitrary shaped
 inputs, and it is easy for a malformed shape to pass unnoticed, with no effects
-other than poor downstream performance or results. This having been said, the
-``isinstance()`` checks used are relatively cheap, and shouldn't cause a
-serious slowdown outside of exceptional cases.
+other than poor downstream performance or results. Asta is meant to be a crude
+aide in dealing with this common problem, but by no means a comprehensive one.
+
+This having been said, the ``isinstance()`` checks used are relatively cheap,
+and shouldn't cause a serious slowdown outside of exceptional cases.
 
 The recommended usage of this library would be to annotate all critical
 functions which take or return ndarrays/tensors, and decorate them with
@@ -91,10 +211,10 @@ A runnable example is given in ``example.py`` in the repository root.
 >>> import os
 >>> import torch.nn.functional as F
 >>> from asta import Tensor, typechecked
->>> 
+>>>
 >>> os.environ["ASTA_TYPECHECK"] = "1"
->>> 
->>> 
+>>>
+>>>
 >>> @typechecked
 >>> def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[float, None]:
 >>>     """ Computes the KL divergence of two FloatTensors of shape ``(8, 64)``. """
@@ -111,6 +231,10 @@ Todo
 - Add tests for ``Tensor``. (DONE)
 - Write examples in README. (DONE)
 - Add tests for empty arrays and tensors.
+- Consider making Ellipses only match empty shapes and positive integer shapes,
+  but not zero-valued shapes. This would be done under the assumption that most
+  people are not interested in working with empty arrays/tensors. And if they
+  are, they can use the ``.size`` attribute for an easy check.
 - Add reprs. (DONE)
 - Fix tensor strategy.
 - Add an option to disable typechecked decorator (default=disabled, ``.astarc``
@@ -123,3 +247,9 @@ Todo
 - Add more descriptive error if you pass torch dtype for an Array or numpy
   dtype for a Tensor.
 - Add ``CudaTensor`` class.
+
+Acknowledgements
+----------------
+- Based on the excellent 'nptyping' package by Ramon Hagenaars.
+- Thanks to Michael Crawshaw (@mtcrawshaw) for helpful comments on natural
+  shape constraints and handling of 0-valued dimension sizes.

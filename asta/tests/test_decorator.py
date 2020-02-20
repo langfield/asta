@@ -8,6 +8,7 @@ from asta import Array, Tensor, typechecked
 
 os.environ["ASTA_TYPECHECK"] = "1"
 
+
 @typechecked
 def np_correct_type(arr: Array[int]) -> Array[int]:
     """ Test function. """
