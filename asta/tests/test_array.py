@@ -49,14 +49,6 @@ def test_array_raises_on_two_nones() -> None:
         _ = Array[None, None]
 
 
-@given(st.lists(elements=st.just(None), min_size=2))
-def test_array_raises_on_multiple_nones(none_list: List[NoneType]) -> None:
-    """ ``Array[None,...]`` should raise a TypeError. """
-    none_tuple = tuple(none_list)
-    with pytest.raises(TypeError):
-        _ = Array[none_tuple]
-
-
 def test_array_passes_ints() -> None:
     """ Manual test for integer dtypes. """
     int8 = np.ones((1, 1), dtype=np.int8)
@@ -83,6 +75,57 @@ def test_array_notype() -> None:
     assert not isinstance(int8, Array[1, 2])
 
 
+def test_array_wildcard_fails_for_zero_sizes() -> None:
+    """ A wildcard ``-1`` shouldn't match a zero-size. """
+    arr = np.zeros(())
+    empty_1 = np.zeros((0,))
+    empty_2 = np.zeros((1, 2, 3, 0))
+    empty_3 = np.zeros((1, 0, 3, 4))
+    assert not isinstance(arr, Array[-1])
+    assert not isinstance(empty_1, Array[-1])
+    assert not isinstance(empty_2, Array[1, 2, 3, -1])
+    assert not isinstance(empty_3, Array[1, -1, 3, 4])
+
+
+def test_array_ellipsis_fails_for_zero_sizes() -> None:
+    """ An empty array shouldn't pass for ``Array[...]``, etc. """
+    arr = np.zeros(())
+    empty_1 = np.zeros((0,))
+    empty_2 = np.zeros((1, 2, 3, 0))
+    empty_3 = np.zeros((1, 0, 3, 4))
+    assert isinstance(arr, Array[...])
+    assert not isinstance(empty_1, Array[...])
+    assert not isinstance(empty_2, Array[...])
+    assert not isinstance(empty_3, Array[...])
+    assert not isinstance(empty_2, Array[1, ...])
+    assert not isinstance(empty_3, Array[1, ...])
+    assert not isinstance(empty_2, Array[1, 2, 3, ...])
+    assert not isinstance(empty_3, Array[1, ..., 3, 4])
+
+
+def test_array_ellipsis_passes_for_empty_subshapes() -> None:
+    """ An Ellipsis should be a valid replacement for ``()``. """
+    arr = np.zeros((1, 2, 3))
+    assert isinstance(arr, Array[...])
+    assert isinstance(arr, Array[1, 2, ...])
+    assert isinstance(arr, Array[1, 2, 3, ...])
+    assert isinstance(arr, Array[..., 1, 2, 3, ...])
+    assert isinstance(arr, Array[..., 1, ..., 2, ..., 3, ...])
+    assert isinstance(arr, Array[1, ..., 2, ..., 3])
+    assert isinstance(arr, Array[1, ..., 2, 3])
+    assert isinstance(arr, Array[..., 2, 3])
+    assert isinstance(arr, Array[..., 3])
+    assert isinstance(arr, Array[..., 2, ...])
+
+
+@given(st.lists(elements=st.just(None), min_size=2))
+def test_array_raises_on_multiple_nones(none_list: List[NoneType]) -> None:
+    """ ``Array[None,...]`` should raise a TypeError. """
+    none_tuple = tuple(none_list)
+    with pytest.raises(TypeError):
+        _ = Array[none_tuple]
+
+
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)))
 def test_array_passes_generic_isinstance(arr: Array) -> None:
     """ Make sure a generic numpy array is an instance of 'Array'. """
@@ -99,8 +142,8 @@ def test_array_scalar_isinstance_none(arr: Array) -> None:
     """ Test that 'Array[None]' matches a scalar. """
     assert isinstance(arr, Array[None])
     assert isinstance(arr, Array[arr.dtype, None])
-    assert not isinstance(arr, Array[...])
-    assert not isinstance(arr, Array[arr.dtype, ...])
+    assert isinstance(arr, Array[...])
+    assert isinstance(arr, Array[arr.dtype, ...])
 
 
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)))
@@ -128,7 +171,11 @@ def test_array_handles_zeros_in_shape(arr: Array) -> None:
 
 @given(st.data())
 def test_array_handles_wildcard_shapes(data: st.DataObject) -> None:
-    """ Test that arr with dim >= 1 is not scalar, and passes for its own shape. """
+    """
+    We generate a (possibly empty) shape, add a few wildcards, then draw
+    positive integer replacements for the wildcards, and assert that the
+    replacement shape passed for the wildcard Array type.
+    """
     seq = list(data.draw(hnp.array_shapes(min_dims=0)))
     num_wildcards = data.draw(st.integers(min_value=1, max_value=3))
     seq.extend([-1] * num_wildcards)

@@ -100,8 +100,8 @@ def test_tensor_scalar_isinstance_none(data: st.DataObject) -> None:
     t = data.draw(strats.tensors(shape=tuple()))
     assert isinstance(t, Tensor[None])
     assert isinstance(t, Tensor[t.dtype, None])
-    assert not isinstance(t, Tensor[...])
-    assert not isinstance(t, Tensor[t.dtype, ...])
+    assert isinstance(t, Tensor[...])
+    assert isinstance(t, Tensor[t.dtype, ...])
 
 
 @given(st.data())
