@@ -106,6 +106,17 @@ def test_array_scalar_isinstance_none(arr: Array) -> None:
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)))
 def test_array_handles_nontrival_shapes(arr: Array) -> None:
     """ Test that arr with dim >= 1 is not scalar, and passes for its own shape. """
+    left, right = rand_split_shape(arr.shape)
+    assert isinstance(arr, Array[left + (...,) + right])
+    assert not isinstance(arr, Array[None])
+    assert isinstance(arr, Array[arr.shape])
+    assert isinstance(arr, Array[...])
+    assert isinstance(arr, Array[(...,)])
+
+
+@given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)))
+def test_array_handles_zeros_in_shape(arr: Array) -> None:
+    """ Test that arr with dim >= 1 is not scalar, and passes for its own shape. """
     if arr.shape:
         left, right = rand_split_shape(arr.shape)
         assert isinstance(arr, Array[left + (...,) + right])
