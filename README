@@ -247,6 +247,23 @@ Todo
 - Add more descriptive error if you pass torch dtype for an Array or numpy
   dtype for a Tensor.
 - Add ``CudaTensor`` class.
+- Consider adding support for arbitrary shape/type constraints as subscript
+  arguments. They would be of the form:
+
+    >>> def fn(shape: Tuple[int, ...]) -> bool:
+    >>>     n: int
+    >>>     for i, elem in enumerate(shape):
+    >>>         if i == 0:
+    >>>             n = elem
+    >>>         elif elem == 2 * n:
+    >>>             n = elem
+    >>>         else:
+    >>>             return False
+    >>>     return True
+
+  The above constraint would only pass for shapes ``(n, 2n, 4n, 8n...)``.
+  To enforce it, you would use ``Array[fn]``.
+- Consider overriding the ``__getitem__()`` function to allow for kwargs.
 
 Acknowledgements
 ----------------
