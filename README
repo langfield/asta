@@ -265,6 +265,13 @@ Todo
 - Consider adding a delimiter in the typecheck decorator output to distinguish
   the typecheck passes between different functions and signatures. Something
   like ``================<asta.typechecked_function()>================``.
+- Consider adding support for tensorflow.
+- Consider adding support for passing ``()`` as in ``Array[int, ()]`` to denote
+  scalar arrays instead of ``Scalar`` or ``None``.
+- Consider reserving ``None`` shape and type for unintialized shape globals.
+  Attempting to typecheck with them will raise an error warning that they are
+  uninitialized. Then you can set your dim variable defaults in config module
+  all to ``None``.
 
 Acknowledgements
 ----------------
