@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" A module for programmatically storing shapes sizes for shape annotations. """
+""" A module for programmatically storing dimension sizes for annotations. """
 from typing import Dict, Any
 
 # pylint: disable=redefined-outer-name
 
-shapes: Dict[str, Any]
+dims: Dict[str, Any]
 
 
 def __getattr__(name: str) -> Any:
-    """ Yields the shapes. """
+    """ Yields the dims. """
     default = None
     try:
         try:
-            return shapes[name]
+            return dims[name]
         except KeyError:
             return default
     except NameError:
@@ -21,9 +21,9 @@ def __getattr__(name: str) -> Any:
 
 
 def __setattr__(name: str, value: Any) -> None:
-    """ Sets the shapes. """
+    """ Sets the dims. """
     try:
-        shapes
+        dims
     except NameError:
-        shapes = {}
-    shapes[name] = value
+        dims = {}
+    dims[name] = value

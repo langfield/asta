@@ -276,6 +276,8 @@ Todo
   uninitialized. Then you can set your dim variable defaults in config module
   all to ``None``. (DONE)
 - Add uninitialized dimension size error to decorator. See preceding note.
+- Add section in README about using ``asta.dims`` for programmatically-set
+  dimension sizes in shape annotations.
 
 Acknowledgements
 ----------------
