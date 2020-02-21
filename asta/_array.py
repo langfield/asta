@@ -156,6 +156,8 @@ class _Array(metaclass=_ArrayMeta):
                 cls.dtype, cls.kind = _Array.get_dtype(item[0])
                 for i, dim in enumerate(item[1:]):
                     if type(dim) not in cls._DIM_TYPES:
+                        err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
+                        err += f"Valid dimension types: {cls._DIM_TYPES}"
                         raise TypeError(err)
                 cls.shape = _Array.get_shape(item[1:])
 
@@ -163,6 +165,8 @@ class _Array(metaclass=_ArrayMeta):
             else:
                 for i, dim in enumerate(item):
                     if type(dim) not in cls._DIM_TYPES:
+                        err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
+                        err += f"Valid dimension types: {cls._DIM_TYPES}"
                         raise TypeError(err)
                 cls.shape = _Array.get_shape(item)
         else:

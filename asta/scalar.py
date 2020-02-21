@@ -1,4 +1,4 @@
-""" Scalar type class for use in annotating scalar ``Array`` types. """
+""" Scalar type class for use in annotating scalar ``Array`` or ``Tensor`` types. """
 from typing import Any, List
 from asta.constants import GENERIC_TYPES, ARRAY_TYPES
 
