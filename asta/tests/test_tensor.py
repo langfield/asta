@@ -10,10 +10,9 @@ import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 from hypothesis import given, assume
 
-from asta import Tensor
+from asta import Tensor, Scalar
+from asta.tests import hpt
 from asta.utils import rand_split_shape
-from asta.tests import htorch as hpt
-from asta.constants import NoneType
 
 # pylint: disable=no-value-for-parameter
 
@@ -37,16 +36,12 @@ def test_tensor_fails_instantiation() -> None:
         Tensor()
 
 
-def test_tensor_disallows_empty_argument() -> None:
-    """ ``Empty tuple should raise a TypeError. """
+def test_tensor_raises_on_two_scalar_shapes() -> None:
+    """ ``Tensor[(),...]`` should raise a TypeError. """
     with pytest.raises(TypeError):
-        _ = Tensor[()]
-
-
-def test_tensor_raises_on_two_nones() -> None:
-    """ ``Tensor[None,...]`` should raise a TypeError. """
+        _ = Tensor[Scalar, Scalar]
     with pytest.raises(TypeError):
-        _ = Tensor[None, None]
+        _ = Tensor[(), ()]
 
 
 def test_tensor_passes_ints() -> None:
@@ -61,7 +56,23 @@ def test_tensor_passes_ints() -> None:
     assert not isinstance(int64, Tensor[int])
 
 
-def test_tensor_discriminates_np_dtypes() -> None:
+def test_tensor_fails_nones() -> None:
+    """ Manual test for unintialized shape values. """
+    t = torch.ones((1, 1), dtype=torch.int64)
+    assert not isinstance(t, Tensor[None])
+    assert not isinstance(t, Tensor[int, None])
+    assert not isinstance(t, Tensor[float, None])
+    assert not isinstance(t, Tensor[float, None, None])
+    assert not isinstance(t, Tensor[float, None, None, None])
+    t = torch.ones((), dtype=torch.int64)
+    assert not isinstance(t, Tensor[None])
+    assert not isinstance(t, Tensor[int, None])
+    assert not isinstance(t, Tensor[float, None])
+    assert not isinstance(t, Tensor[float, None, None])
+    assert not isinstance(t, Tensor[float, None, None, None])
+
+
+def test_tensor_discriminates_torch_dtypes() -> None:
     """ Another manual test for integer dtypes. """
     int32 = torch.ones((1, 1), dtype=torch.int32)
     assert not isinstance(int32, Tensor[torch.int16])
@@ -118,12 +129,20 @@ def test_tensor_ellipsis_passes_for_empty_subshapes() -> None:
     assert isinstance(t, Tensor[..., 2, ...])
 
 
-@given(st.lists(elements=st.just(None), min_size=2))
-def test_tensor_raises_on_multiple_nones(none_list: List[NoneType]) -> None:
-    """ ``Tensor[None,...]`` should raise a TypeError. """
-    none_tuple = tuple(none_list)
+@given(st.lists(elements=st.just(Scalar), min_size=2))
+def test_tensor_raises_on_multiple_scalar_objects(scalar_list: List[Scalar]) -> None:
+    """ ``Tensor[Scalar,...]`` should raise a TypeError. """
+    scalar_tuple = tuple(scalar_list)
     with pytest.raises(TypeError):
-        _ = Tensor[none_tuple]
+        _ = Tensor[scalar_tuple]
+
+
+@given(st.lists(elements=st.just(()), min_size=2))
+def test_tensor_raises_on_multiple_empties(empties_list: List[tuple]) -> None:
+    """ ``Tensor[(),...]`` should raise a TypeError. """
+    empties_tuple = tuple(empties_list)
+    with pytest.raises(TypeError):
+        _ = Tensor[empties_tuple]
 
 
 @given(hpt.tensors(dtype=hpt.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)))
@@ -132,26 +151,36 @@ def test_tensor_passes_generic_isinstance(t: Tensor) -> None:
     assert isinstance(t, Tensor)
     assert isinstance(t, Tensor[t.dtype])
     assert isinstance(t, Tensor[(t.dtype,)])
+    assert not isinstance(t, Tensor[None])
+    assert not isinstance(t, Tensor[None, None])
     if t.shape:
         arg: tuple = (t.dtype,) + t.shape
         assert isinstance(t, Tensor[arg])
 
 
 @given(hpt.tensors(dtype=hpt.scalar_dtypes(), shape=tuple()))
-def test_tensor_scalar_isinstance_none(t: Tensor) -> None:
-    """ Test that 'Tensor[None]' matches a scalar. """
-    assert isinstance(t, Tensor[None])
-    assert isinstance(t, Tensor[t.dtype, None])
+def test_tensor_handles_scalar_shapes(t: Tensor) -> None:
+    """ Test that 'Tensor[Scalar/()]' matches a scalar. """
+    assert isinstance(t, Tensor[()])
+    assert isinstance(t, Tensor[t.dtype, ()])
+    assert isinstance(t, Tensor[Scalar])
+    assert isinstance(t, Tensor[t.dtype, Scalar])
     assert isinstance(t, Tensor[...])
     assert isinstance(t, Tensor[t.dtype, ...])
+    assert not isinstance(t, Tensor[None])
+    assert not isinstance(t, Tensor[t.dtype, None])
 
 
 @given(hpt.tensors(dtype=hpt.scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)))
 def test_tensor_handles_nontrival_shapes(t: Tensor) -> None:
     """ Test that t with dim >= 1 is not scalar, and passes for its own shape. """
     left, right = rand_split_shape(t.shape)
+    nones = tuple([None] * len(t.shape))
     assert isinstance(t, Tensor[left + (...,) + right])
+    assert not isinstance(t, Tensor[Scalar])
+    assert not isinstance(t, Tensor[()])
     assert not isinstance(t, Tensor[None])
+    assert not isinstance(t, Tensor[nones])
     assert isinstance(t, Tensor[t.shape])
     assert isinstance(t, Tensor[...])
     assert isinstance(t, Tensor[(...,)])
@@ -163,7 +192,8 @@ def test_tensor_handles_zeros_in_shape(t: Tensor) -> None:
     if t.shape:
         left, right = rand_split_shape(t.shape)
         assert isinstance(t, Tensor[left + (...,) + right])
-    assert not isinstance(t, Tensor[None])
+    assert not isinstance(t, Tensor[Scalar])
+    assert not isinstance(t, Tensor[()])
     assert isinstance(t, Tensor[t.shape])
     assert isinstance(t, Tensor[...])
     assert isinstance(t, Tensor[(...,)])

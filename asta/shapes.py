@@ -10,7 +10,7 @@ shapes: Dict[str, Any]
 
 def __getattr__(name: str) -> Any:
     """ Yields the shapes. """
-    default = 0
+    default = None
     try:
         try:
             return shapes[name]

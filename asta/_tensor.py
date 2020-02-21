@@ -6,6 +6,7 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 import torch
 
 from asta.utils import is_subtuple, get_shape_rep, shapecheck
+from asta.scalar import Scalar
 from asta.classes import SubscriptableMeta, SubscriptableType
 from asta.constants import (
     EllipsisType,
@@ -99,14 +100,15 @@ class _Tensor(metaclass=_TensorMeta):
     def get_shape(item: Tuple) -> Optional[Tuple]:
         """ Compute shape from a shape tuple argument. """
         shape: Optional[Tuple] = None
+
         if item:
-            if None not in item:
+            if Scalar not in item and () not in item:
                 shape = item
-            elif item == (None,):
+            elif item in [(Scalar,), ((),)]:
                 shape = ()
             else:
                 none_err = "Too many 'None' arguments. "
-                none_err += "Use 'Tensor[None]' for scalar arrays."
+                none_err += "Use 'Array[None]' for scalar arrays."
                 raise TypeError(none_err)
 
         return shape
@@ -120,13 +122,13 @@ class _Tensor(metaclass=_TensorMeta):
         err = f"Invalid dimension '{item}' of type '{type(item)}'. "
         err += f"Valid dimension types: {cls._DIM_TYPES}"
 
-        # Case where dtype is Any and shape is scalar.
-        if item is None:
-            cls.shape = ()
-
-        elif isinstance(item, (torch.dtype, type)):
+        if isinstance(item, (type, torch.dtype)) and item != Scalar:
             cls.dtype = _Tensor.get_dtype(item)
             cls.shape = None
+
+        # Case where dtype is Any and shape is scalar.
+        elif item in (Scalar, ()):
+            cls.shape = ()
 
         # Case where dtype is not passed in, and there's one input.
         # i.e. ``Tensor[1]`` or ``Tensor[None]`` or ``Tensor[...]``.
@@ -139,7 +141,7 @@ class _Tensor(metaclass=_TensorMeta):
         elif item:
 
             # Case where generic type is specified.
-            if isinstance(item[0], (type, torch.dtype)):
+            if isinstance(item[0], (type, torch.dtype)) and item[0] != Scalar:
                 cls.dtype = _Tensor.get_dtype(item[0])
                 for i, dim in enumerate(item[1:]):
                     if type(dim) not in cls._DIM_TYPES:
