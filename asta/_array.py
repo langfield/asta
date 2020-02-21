@@ -7,6 +7,7 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 import numpy as np
 
 from asta.utils import is_subtuple, get_shape_rep, shapecheck
+from asta.scalar import Scalar
 from asta.classes import SubscriptableMeta, SubscriptableType
 from asta.constants import (
     EllipsisType,
@@ -112,10 +113,11 @@ class _Array(metaclass=_ArrayMeta):
     def get_shape(item: Tuple) -> Optional[Tuple]:
         """ Compute shape from a shape tuple argument. """
         shape: Optional[Tuple] = None
+
         if item:
-            if None not in item:
+            if Scalar not in item and () not in item:
                 shape = item
-            elif item == (None,):
+            elif item in [(Scalar,), ((),)]:
                 shape = ()
             else:
                 none_err = "Too many 'None' arguments. "
@@ -133,16 +135,16 @@ class _Array(metaclass=_ArrayMeta):
         err = f"Invalid dimension '{item}' of type '{type(item)}'. "
         err += f"Valid dimension types: {cls._DIM_TYPES}"
 
-        # Case where dtype is Any and shape is scalar.
-        if item is None:
-            cls.shape = ()
-
-        elif isinstance(item, (np.dtype, type)):
+        if isinstance(item, (type, np.dtype)) and item != Scalar:
             cls.dtype, cls.kind = _Array.get_dtype(item)
             cls.shape = None
 
+        # Case where dtype is Any and shape is scalar.
+        elif item in (Scalar, ()):
+            cls.shape = ()
+
         # Case where dtype is not passed in, and there's one input.
-        # i.e. ``Array[1]`` or ``Array[None]`` or ``Array[...]``.
+        # i.e. ``Array[1]`` or ``Array[...]``.
         elif not isinstance(item, tuple):
             if type(item) not in cls._DIM_TYPES:
                 raise TypeError(err)
@@ -152,7 +154,7 @@ class _Array(metaclass=_ArrayMeta):
         elif item:
 
             # Case where generic type is specified.
-            if isinstance(item[0], (type, np.dtype)):
+            if isinstance(item[0], (type, np.dtype)) and item[0] != Scalar:
                 cls.dtype, cls.kind = _Array.get_dtype(item[0])
                 for i, dim in enumerate(item[1:]):
                     if type(dim) not in cls._DIM_TYPES:
@@ -174,5 +176,5 @@ class _Array(metaclass=_ArrayMeta):
             empty_err += "Use 'Array[None]' to indicate a scalar."
             raise TypeError(empty_err)
 
-        if cls.shape is not None and is_subtuple((Ellipsis, Ellipsis), cls.shape)[0]:
+        if isinstance(cls.shape, tuple) and is_subtuple((..., ...), cls.shape)[0]:
             raise TypeError("Invalid shape: repeated '...'")

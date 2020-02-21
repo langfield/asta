@@ -35,9 +35,9 @@ Or shapes only:
 
 (Allows np.ndarrays with shape ``(1, 2, 3)``)
 
-To specify scalar arrays/tensors, use ``None``:
+To specify scalar arrays/tensors, use ``()`` or ``Scalar``:
 
->>> def fn(arr: Array[int, None]):
+>>> def fn(arr: Array[int, ()]):
 >>>     pass
 
 (Allows scalar np.ndarrays of type ``np.int64``)
@@ -71,7 +71,7 @@ A runnable example is given in ``example.py`` in the repository root.
 >>>
 >>>
 >>> @typechecked
->>> def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[float, None]:
+>>> def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[float, ()]:
 >>>     """ Computes the KL divergence of two FloatTensors of shape ``(8, 64)``. """
 >>>     divergence = F.kl_div(t_1, t_2, reduction="sum")
 >>>     return divergence
@@ -113,7 +113,8 @@ The valid subscript arguments for ``Array`` and ``Tensor`` are as follows:
     2. ``-1``, a wildcard for any positive integer size.
     3. Ellipses (``...``), a placeholder for any contiguous sequence of
     positive integer sizes, including zero-length sequences.
-    4. ``None``, indicating a scalar array or tensor.
+    4. ``()`` or ``Scalar``, which both indicate a scalar array or tensor.
+    These are interchangeable.
     5. Omitted (no argument passed).
 
 Shape constraints and best practices
@@ -241,7 +242,7 @@ Todo
 - Add tests for ``@typechecked``. (DONE)
 - Consider changing name of decorator to ``@shapechecked``. (NO)
 - Consider dropping the ``Scalar`` object. The less unfamiliar objects, the
-  better.
+  better. (NO)
 - Add more descriptive error if you pass torch dtype for an Array or numpy
   dtype for a Tensor.
 - Add ``CudaTensor`` class.
@@ -267,13 +268,14 @@ Todo
   like ``================<asta.typechecked_function()>================``.
 - Consider adding support for tensorflow.
 - Consider adding support for passing ``()`` as in ``Array[int, ()]`` to denote
-  scalar arrays instead of ``Scalar`` or ``None``.
+  scalar arrays instead of ``Scalar`` or ``None``. (DONE)
 - Write tests for ``Scalar``.
 - Write analogues of new ``Array`` tests for ``Tensor``. (DONE)
 - Consider reserving ``None`` shape and type for unintialized shape globals.
   Attempting to typecheck with them will raise an error warning that they are
   uninitialized. Then you can set your dim variable defaults in config module
-  all to ``None``.
+  all to ``None``. (DONE)
+- Add uninitialized dimension size error to decorator. See preceding note.
 
 Acknowledgements
 ----------------

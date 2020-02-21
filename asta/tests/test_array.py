@@ -10,10 +10,9 @@ import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 from hypothesis import given, assume
 
-from asta import Array
+from asta import Array, Scalar
 from asta.utils import rand_split_shape
 from asta.tests import strategies as strats
-from asta.constants import NoneType
 
 # pylint: disable=no-value-for-parameter
 
@@ -37,16 +36,12 @@ def test_array_fails_instantiation() -> None:
         Array()
 
 
-def test_array_disallows_empty_argument() -> None:
-    """ ``Empty tuple should raise a TypeError. """
+def test_array_raises_on_two_scalar_shapes() -> None:
+    """ ``Array[(),...]`` should raise a TypeError. """
     with pytest.raises(TypeError):
-        _ = Array[()]
-
-
-def test_array_raises_on_two_nones() -> None:
-    """ ``Array[None,...]`` should raise a TypeError. """
+        _ = Array[Scalar, Scalar]
     with pytest.raises(TypeError):
-        _ = Array[None, None]
+        _ = Array[(), ()]
 
 
 def test_array_passes_ints() -> None:
@@ -59,6 +54,22 @@ def test_array_passes_ints() -> None:
     assert not isinstance(int16, Array[int])
     assert not isinstance(int32, Array[int])
     assert isinstance(int64, Array[int])
+
+
+def test_array_fails_nones() -> None:
+    """ Manual test for unintialized shape values. """
+    arr = np.ones((1, 1), dtype=np.int64)
+    assert not isinstance(arr, Array[None])
+    assert not isinstance(arr, Array[int, None])
+    assert not isinstance(arr, Array[float, None])
+    assert not isinstance(arr, Array[float, None, None])
+    assert not isinstance(arr, Array[float, None, None, None])
+    arr = np.ones((), dtype=np.int64)
+    assert not isinstance(arr, Array[None])
+    assert not isinstance(arr, Array[int, None])
+    assert not isinstance(arr, Array[float, None])
+    assert not isinstance(arr, Array[float, None, None])
+    assert not isinstance(arr, Array[float, None, None, None])
 
 
 def test_array_discriminates_np_dtypes() -> None:
@@ -118,12 +129,20 @@ def test_array_ellipsis_passes_for_empty_subshapes() -> None:
     assert isinstance(arr, Array[..., 2, ...])
 
 
-@given(st.lists(elements=st.just(None), min_size=2))
-def test_array_raises_on_multiple_nones(none_list: List[NoneType]) -> None:
-    """ ``Array[None,...]`` should raise a TypeError. """
-    none_tuple = tuple(none_list)
+@given(st.lists(elements=st.just(Scalar), min_size=2))
+def test_array_raises_on_multiple_scalar_objects(scalar_list: List[Scalar]) -> None:
+    """ ``Array[Scalar,...]`` should raise a TypeError. """
+    scalar_tuple = tuple(scalar_list)
     with pytest.raises(TypeError):
-        _ = Array[none_tuple]
+        _ = Array[scalar_tuple]
+
+
+@given(st.lists(elements=st.just(()), min_size=2))
+def test_array_raises_on_multiple_empties(empties_list: List[tuple]) -> None:
+    """ ``Array[(),...]`` should raise a TypeError. """
+    empties_tuple = tuple(empties_list)
+    with pytest.raises(TypeError):
+        _ = Array[empties_tuple]
 
 
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=0)))
@@ -132,26 +151,36 @@ def test_array_passes_generic_isinstance(arr: Array) -> None:
     assert isinstance(arr, Array)
     assert isinstance(arr, Array[arr.dtype])
     assert isinstance(arr, Array[(arr.dtype,)])
+    assert not isinstance(arr, Array[None])
+    assert not isinstance(arr, Array[None, None])
     if arr.shape:
         arg: tuple = (arr.dtype,) + arr.shape
         assert isinstance(arr, Array[arg])
 
 
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=tuple()))
-def test_array_scalar_isinstance_none(arr: Array) -> None:
-    """ Test that 'Array[None]' matches a scalar. """
-    assert isinstance(arr, Array[None])
-    assert isinstance(arr, Array[arr.dtype, None])
+def test_array_handles_scalar_shapes(arr: Array) -> None:
+    """ Test that 'Array[Scalar/()]' matches a scalar. """
+    assert isinstance(arr, Array[()])
+    assert isinstance(arr, Array[arr.dtype, ()])
+    assert isinstance(arr, Array[Scalar])
+    assert isinstance(arr, Array[arr.dtype, Scalar])
     assert isinstance(arr, Array[...])
     assert isinstance(arr, Array[arr.dtype, ...])
+    assert not isinstance(arr, Array[None])
+    assert not isinstance(arr, Array[arr.dtype, None])
 
 
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=hnp.array_shapes(min_dims=1)))
 def test_array_handles_nontrival_shapes(arr: Array) -> None:
     """ Test that arr with dim >= 1 is not scalar, and passes for its own shape. """
     left, right = rand_split_shape(arr.shape)
+    nones = tuple([None] * len(arr.shape))
     assert isinstance(arr, Array[left + (...,) + right])
+    assert not isinstance(arr, Array[Scalar])
+    assert not isinstance(arr, Array[()])
     assert not isinstance(arr, Array[None])
+    assert not isinstance(arr, Array[nones])
     assert isinstance(arr, Array[arr.shape])
     assert isinstance(arr, Array[...])
     assert isinstance(arr, Array[(...,)])
@@ -163,7 +192,8 @@ def test_array_handles_zeros_in_shape(arr: Array) -> None:
     if arr.shape:
         left, right = rand_split_shape(arr.shape)
         assert isinstance(arr, Array[left + (...,) + right])
-    assert not isinstance(arr, Array[None])
+    assert not isinstance(arr, Array[Scalar])
+    assert not isinstance(arr, Array[()])
     assert isinstance(arr, Array[arr.shape])
     assert isinstance(arr, Array[...])
     assert isinstance(arr, Array[(...,)])

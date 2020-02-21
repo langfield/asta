@@ -16,7 +16,7 @@ def dangerous_kl(t_1: torch.Tensor, t_2: torch.Tensor) -> torch.Tensor:
 
 
 @typechecked
-def safe_kl(t_1: Tensor[float, 1, 4], t_2: Tensor[float, 1, 4]) -> Tensor[float, None]:
+def safe_kl(t_1: Tensor[float, 1, 4], t_2: Tensor[float, 1, 4]) -> Tensor[float, ()]:
     """ Computes the KL divergence of two FloatTensors of shape ``(1, 4)``. """
     divergence = F.kl_div(t_1, t_2, reduction="sum")
     return divergence

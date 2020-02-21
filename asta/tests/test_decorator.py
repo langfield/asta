@@ -46,39 +46,87 @@ def np_incorrect_return_dtype(arr: Array[np.int64]) -> Array[np.int32]:
 
 
 @typechecked
-def torch_correct_type(arr: Tensor[int]) -> Tensor[int]:
+def np_none(arr: Array[None]) -> Array[int]:
     """ Test function. """
     return arr
 
 
 @typechecked
-def torch_incorrect_type(arr: Tensor[float]) -> Tensor[int]:
+def np_none_return(arr: Array[int]) -> Array[None]:
     """ Test function. """
     return arr
 
 
 @typechecked
-def torch_incorrect_return_type(arr: Tensor[int]) -> Tensor[bytes]:
+def np_nones(arr: Array[None, None]) -> Array[int]:
     """ Test function. """
     return arr
 
 
 @typechecked
-def torch_correct_dtype(arr: Tensor[torch.int32]) -> Tensor[torch.int32]:
+def np_nones_return(arr: Array[int]) -> Array[None, None]:
     """ Test function. """
     return arr
 
 
 @typechecked
-def torch_incorrect_dtype(arr: Tensor[torch.uint8]) -> Tensor[torch.int64]:
+def torch_correct_type(t: Tensor[int]) -> Tensor[int]:
     """ Test function. """
-    return arr
+    return t
 
 
 @typechecked
-def torch_incorrect_return_dtype(arr: Tensor[torch.int64]) -> Tensor[torch.int32]:
+def torch_incorrect_type(t: Tensor[float]) -> Tensor[int]:
     """ Test function. """
-    return arr
+    return t
+
+
+@typechecked
+def torch_incorrect_return_type(t: Tensor[int]) -> Tensor[bytes]:
+    """ Test function. """
+    return t
+
+
+@typechecked
+def torch_correct_dtype(t: Tensor[torch.int32]) -> Tensor[torch.int32]:
+    """ Test function. """
+    return t
+
+
+@typechecked
+def torch_incorrect_dtype(t: Tensor[torch.uint8]) -> Tensor[torch.int64]:
+    """ Test function. """
+    return t
+
+
+@typechecked
+def torch_incorrect_return_dtype(t: Tensor[torch.int64]) -> Tensor[torch.int32]:
+    """ Test function. """
+    return t
+
+
+@typechecked
+def torch_none(t: Tensor[None]) -> Tensor[int]:
+    """ Test function. """
+    return t
+
+
+@typechecked
+def torch_none_return(t: Tensor[int]) -> Tensor[None]:
+    """ Test function. """
+    return t
+
+
+@typechecked
+def torch_nones(t: Tensor[None, None]) -> Tensor[int]:
+    """ Test function. """
+    return t
+
+
+@typechecked
+def torch_nones_return(t: Tensor[int]) -> Tensor[None, None]:
+    """ Test function. """
+    return t
 
 
 def test_np_typechecked():
@@ -95,6 +143,14 @@ def test_np_typechecked():
         np_incorrect_return_type(arr)
     with pytest.raises(TypeError):
         np_incorrect_return_dtype(arr)
+    with pytest.raises(TypeError):
+        np_none(arr)
+    with pytest.raises(TypeError):
+        np_none_return(arr)
+    with pytest.raises(TypeError):
+        np_nones(arr)
+    with pytest.raises(TypeError):
+        np_nones_return(arr)
 
 
 def test_torch_typechecked():
@@ -111,3 +167,11 @@ def test_torch_typechecked():
         torch_incorrect_return_type(t)
     with pytest.raises(TypeError):
         torch_incorrect_return_dtype(t)
+    with pytest.raises(TypeError):
+        torch_none(t)
+    with pytest.raises(TypeError):
+        torch_none_return(t)
+    with pytest.raises(TypeError):
+        torch_nones(t)
+    with pytest.raises(TypeError):
+        torch_nones_return(t)
