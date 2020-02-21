@@ -234,7 +234,7 @@ Todo
   people are not interested in working with empty arrays/tensors. And if they
   are, they can use the ``.size`` attribute for an easy check. (DONE)
 - Add reprs. (DONE)
-- Fix tensor strategy.
+- Fix tensor strategy. (DONE)
 - Add an option to disable typechecked decorator (default=disabled, ``.astarc``
   file).
 - Add environment variable for typechecking. (DONE)
@@ -269,7 +269,7 @@ Todo
 - Consider adding support for passing ``()`` as in ``Array[int, ()]`` to denote
   scalar arrays instead of ``Scalar`` or ``None``.
 - Write tests for ``Scalar``.
-- Write analogues of new ``Array`` tests for ``Tensor``.
+- Write analogues of new ``Array`` tests for ``Tensor``. (DONE)
 - Consider reserving ``None`` shape and type for unintialized shape globals.
   Attempting to typecheck with them will raise an error warning that they are
   uninitialized. Then you can set your dim variable defaults in config module
