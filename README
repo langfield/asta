@@ -262,6 +262,9 @@ Todo
   The above constraint would only pass for shapes ``(n, 2n, 4n, 8n...)``.
   To enforce it, you would use ``Array[fn]``.
 - Consider overriding the ``__getitem__()`` function to allow for kwargs.
+- Consider adding a delimiter in the typecheck decorator output to distinguish
+  the typecheck passes between different functions and signatures. Something
+  like ``================<asta.typechecked_function()>================``.
 
 Acknowledgements
 ----------------
