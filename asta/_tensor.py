@@ -143,6 +143,8 @@ class _Tensor(metaclass=_TensorMeta):
                 cls.dtype = _Tensor.get_dtype(item[0])
                 for i, dim in enumerate(item[1:]):
                     if type(dim) not in cls._DIM_TYPES:
+                        err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
+                        err += f"Valid dimension types: {cls._DIM_TYPES}"
                         raise TypeError(err)
                 cls.shape = _Tensor.get_shape(item[1:])
 
@@ -150,6 +152,8 @@ class _Tensor(metaclass=_TensorMeta):
             else:
                 for i, dim in enumerate(item):
                     if type(dim) not in cls._DIM_TYPES:
+                        err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
+                        err += f"Valid dimension types: {cls._DIM_TYPES}"
                         raise TypeError(err)
                 cls.shape = _Tensor.get_shape(item)
         else:
