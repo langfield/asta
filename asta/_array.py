@@ -39,7 +39,7 @@ class _ArrayMeta(SubscriptableMeta):
         raise NotImplementedError
 
     def __getitem__(cls, item: Any) -> GenericMeta:
-        """ Defer to ``typish``, which calls ``cls._after_subscription()``. """
+        """ Defer to superclass, which calls ``cls._after_subscription()``. """
         return SubscriptableMeta.__getitem__(cls, item)
 
     def __eq__(cls, other: Any) -> bool:
