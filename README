@@ -280,6 +280,8 @@ Todo
   dimension sizes in shape annotations.
 - Fix base class of ``_ArrayMeta`` and ``_TensorMeta`` so that type ignore is
   not needed in ``decorators.py``.
+- Consider removing library-specific metaclasses.
+- Consider making ``parse_subscript`` a classmethod of ``SubscriptableMeta``.
 
 Acknowledgements
 ----------------
