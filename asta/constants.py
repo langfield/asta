@@ -4,6 +4,8 @@ from typing import Dict, List, Any
 import torch
 import numpy as np
 
+from asta.dims import Placeholder
+
 # pylint: disable=invalid-name, too-few-public-methods
 
 
@@ -48,6 +50,7 @@ DIM_TYPES: List[type] = [
     EllipsisType,
     NoneType,  # type: ignore[misc]
     tuple,
+    Placeholder,
 ]
 NP_UNSIZED_TYPE_KINDS: Dict[type, str] = {bytes: "S", str: "U", object: "O"}
 NP_GENERIC_TYPES: List[type] = [

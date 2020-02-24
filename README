@@ -278,6 +278,8 @@ Todo
 - Add uninitialized dimension size error to decorator. See preceding note.
 - Add section in README about using ``asta.dims`` for programmatically-set
   dimension sizes in shape annotations.
+- Fix base class of ``_ArrayMeta`` and ``_TensorMeta`` so that type ignore is
+  not needed in ``decorators.py``.
 
 Acknowledgements
 ----------------
