@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ This module contains meta functionality for the ``Tensor`` type. """
+from abc import abstractmethod
 from typing import List, Optional, Any, Tuple, Dict, Union
 
 import torch
 
 from asta.utils import is_subtuple, get_shape_rep, shapecheck
 from asta.scalar import Scalar
-from asta.classes import SubscriptableMeta, SubscriptableType
+from asta.classes import SubscriptableMeta, GenericMeta
 from asta.constants import (
     EllipsisType,
     DIM_TYPES,
@@ -23,7 +24,13 @@ class _TensorMeta(SubscriptableMeta):
     shape: tuple
     dtype: torch.dtype
 
-    def __getitem__(cls, item: Any) -> SubscriptableType:
+    @classmethod
+    @abstractmethod
+    def _after_subscription(cls, item: Any) -> None:
+        """ Method signature for subscript argument processing. """
+        raise NotImplementedError
+
+    def __getitem__(cls, item: Any) -> GenericMeta:
         """ Defer to the metaclass which calls ``cls._after_subscription()``. """
         return SubscriptableMeta.__getitem__(cls, item)
 
