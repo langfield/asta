@@ -4,7 +4,7 @@ PRIVATE MODULE: do not import (from) it directly.
 This module contains decorators.
 """
 import os
-from typing import Any, Tuple, Dict, Union
+from typing import Any, Tuple, Dict
 
 import asta.dims
 from asta.dims import Placeholder
@@ -12,14 +12,13 @@ from asta.array import Array
 from asta.tensor import Tensor
 from asta._array import _ArrayMeta
 from asta._tensor import _TensorMeta
+from asta.classes import SubscriptableMeta
 
 
 METAMAP = {_ArrayMeta: Array, _TensorMeta: Tensor}
 
 
-def refresh(
-    annotation: Union[_ArrayMeta, _TensorMeta]
-) -> Union[_ArrayMeta, _TensorMeta]:
+def refresh(annotation: SubscriptableMeta) -> SubscriptableMeta:
     """ Load an asta type annotation containing placeholders. """
     dtype = annotation.dtype
     shape = annotation.shape
@@ -72,7 +71,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         for i, arg in enumerate(args):
             name = list(annotations.keys())[i]
             annotation = annotations[name]
-            if isinstance(annotation, (_ArrayMeta, _TensorMeta)):
+            if isinstance(annotation, SubscriptableMeta):
                 annotation = refresh(annotation)
                 if not isinstance(arg, annotation):
                     type_err = f"Argument value for parameter '{name}' "
@@ -84,7 +83,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         # Check keyword arguments.
         for name, kwarg in kwargs.items():
             annotation = annotations[name]
-            if isinstance(annotation, (_ArrayMeta, _TensorMeta)):
+            if isinstance(annotation, SubscriptableMeta):
                 annotation = refresh(annotation)
                 if not isinstance(kwarg, annotation):
                     type_err = f"Argument value for parameter '{name}' "
@@ -96,7 +95,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         # Check return.
         ret = decorated(*args, **kwargs)
         return_annotation = annotations["return"]
-        if isinstance(return_annotation, (_ArrayMeta, _TensorMeta)):
+        if isinstance(return_annotation, SubscriptableMeta):
             return_annotation = refresh(return_annotation)
             if not isinstance(ret, return_annotation):
                 type_err = f"Return value has wrong type. "
