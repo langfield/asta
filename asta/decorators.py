@@ -4,18 +4,54 @@ PRIVATE MODULE: do not import (from) it directly.
 This module contains decorators.
 """
 import os
-import inspect
-from typing import Any, Tuple, Dict
+from typing import Any, Tuple, Dict, Union
 
+import asta.dims
+from asta.dims import Placeholder
+from asta.array import Array
+from asta.tensor import Tensor
 from asta._array import _ArrayMeta
 from asta._tensor import _TensorMeta
 
 
+METAMAP = {_ArrayMeta: Array, _TensorMeta: Tensor}
+
+
+def refresh(
+    annotation: Union[_ArrayMeta, _TensorMeta]
+) -> Union[_ArrayMeta, _TensorMeta]:
+    """ Load an asta type annotation containing placeholders. """
+    dtype = annotation.dtype
+    shape = annotation.shape
+    dimvars = []
+
+    if annotation.shape is not None:
+        for dim in annotation.shape:
+            if isinstance(dim, Placeholder):
+                dimvar = getattr(asta.dims, dim.name)
+                dimvars.append(dimvar)
+            else:
+                dimvars.append(dim)
+        assert len(dimvars) == len(shape)
+        shape = tuple(dimvars)
+
+    subscriptable_class = METAMAP[type(annotation)]
+
+    if shape is not None:
+        annotation = subscriptable_class[dtype, shape]  # type: ignore
+    else:
+        annotation = subscriptable_class[dtype]
+
+    return annotation
+
+
 def typechecked(decorated):  # type: ignore[no-untyped-def]
     """
-    Typecheck a function annotated with ``asta`` type objects. This decorator will only
-    check the shape and datatype of parameters annotated with ``asta`` type variables.
-    Mypy should be used for everything else.
+    Typecheck a function annotated with ``asta`` type objects. This decorator
+    will only check the shape and datatype of parameters annotated with
+    ``asta`` type variables.  Mypy should be used for everything else. Note
+    that the argument-parameter assignment problem is trivial because the only
+    arguments which can be out of order are keyword arguments.
 
     Parameters
     ----------
@@ -27,32 +63,47 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
     _wrapper : ``Callable[[Any], Any]``.
         The decorated version of ``decorated``.
     """
-    sig = inspect.signature(decorated)
-    param_names = list(sig.parameters)
 
     def _wrapper(*args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         """ Decorated/typechecked function. """
+        annotations = decorated.__annotations__
 
+        # Check positional arguments.
         for i, arg in enumerate(args):
-            name = param_names[i]
-            param = sig.parameters[name]
-            print("Param annotation:", param.annotation)
-            if isinstance(param.annotation, (_ArrayMeta, _TensorMeta)):
-                if not isinstance(arg, param.annotation):
-                    type_err = f"Argument value for parameter '{param.name}' "
-                    type_err += f"has wrong type. Expected type: '{param.annotation}' "
+            name = list(annotations.keys())[i]
+            annotation = annotations[name]
+            if isinstance(annotation, (_ArrayMeta, _TensorMeta)):
+                annotation = refresh(annotation)
+                if not isinstance(arg, annotation):
+                    type_err = f"Argument value for parameter '{name}' "
+                    type_err += f"has wrong type. Expected type: '{annotation}' "
                     type_err += f"Actual type: '{type(arg)}'"
                     raise TypeError(type_err)
-                print(f"PASSED: Arg '{name}' matched parameter '{param.annotation}'.")
+                print(f"PASSED: Arg '{name}' matched parameter '{annotation}'.")
 
+        # Check keyword arguments.
+        for name, kwarg in kwargs.items():
+            annotation = annotations[name]
+            if isinstance(annotation, (_ArrayMeta, _TensorMeta)):
+                annotation = refresh(annotation)
+                if not isinstance(kwarg, annotation):
+                    type_err = f"Argument value for parameter '{name}' "
+                    type_err += f"has wrong type. Expected type: '{annotation}' "
+                    type_err += f"Actual type: '{type(kwarg)}'"
+                    raise TypeError(type_err)
+                print(f"PASSED: Arg '{name}' matched parameter '{annotation}'.")
+
+        # Check return.
         ret = decorated(*args, **kwargs)
-        if isinstance(sig.return_annotation, (_ArrayMeta, _TensorMeta)):
-            if not isinstance(ret, sig.return_annotation):
+        return_annotation = annotations["return"]
+        if isinstance(return_annotation, (_ArrayMeta, _TensorMeta)):
+            return_annotation = refresh(return_annotation)
+            if not isinstance(ret, return_annotation):
                 type_err = f"Return value has wrong type. "
-                type_err += f"Expected type: '{sig.return_annotation}' "
+                type_err += f"Expected type: '{return_annotation}' "
                 type_err += f"Actual type: '{type(ret)}'"
                 raise TypeError(type_err)
-            print(f"PASSED: Return matched return type '{sig.return_annotation}'.")
+            print(f"PASSED: Return matched return type '{return_annotation}'.")
 
         return ret
 

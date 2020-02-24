@@ -5,7 +5,10 @@ This module contains class implementations.
 """
 import types
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic, Any
+from typing import TypeVar, Generic, Any, Union
+
+import torch
+import numpy as np
 
 # pylint: disable=too-few-public-methods
 
@@ -14,6 +17,10 @@ T = TypeVar("T")
 
 class SubscriptableType(ABC):
     """ Abstract base class for subscriptable types. """
+
+    kind: str
+    shape: tuple
+    dtype: Union[np.dtype, torch.dtype]
 
     @classmethod
     @abstractmethod

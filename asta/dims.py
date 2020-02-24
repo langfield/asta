@@ -3,21 +3,31 @@
 """ A module for programmatically storing dimension sizes for annotations. """
 from typing import Dict, Any
 
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name, too-few-public-methods
 
 dims: Dict[str, Any]
 
 
+class Placeholder:
+    """ Placeholder for annotations dimensions. """
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def __repr__(self) -> str:
+        """ String representation of placeholder. """
+        return f"<Placeholder name: '{self.name}'>"
+
+
 def __getattr__(name: str) -> Any:
     """ Yields the dims. """
-    default = None
     try:
         try:
             return dims[name]
         except KeyError:
-            return default
+            return Placeholder(name)
     except NameError:
-        return default
+        return Placeholder(name)
 
 
 def __setattr__(name: str, value: Any) -> None:
