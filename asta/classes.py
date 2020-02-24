@@ -5,7 +5,7 @@ This module contains class implementations.
 """
 import types
 from abc import abstractmethod
-from typing import TypeVar, Generic, Any, Union, Optional, Tuple
+from typing import TypeVar, Generic, Any, Union, Optional, Tuple, List
 
 import torch
 import numpy as np
@@ -43,6 +43,8 @@ class SubscriptableMeta(GenericMeta):
     'SomeType'
     """
 
+    DIM_TYPES: List[type]
+
     __args__: Any
     __origin__: Any
 
@@ -55,6 +57,12 @@ class SubscriptableMeta(GenericMeta):
     @abstractmethod
     def _after_subscription(cls, item: Any) -> None:
         """ Method signature for subscript argument processing. """
+        raise NotImplementedError
+
+    @staticmethod
+    @abstractmethod
+    def get_dtype(item: Any) -> Tuple[Optional[np.dtype], str]:
+        """ Computes dtype. """
         raise NotImplementedError
 
     def __getitem__(cls, item: Any) -> GenericMeta:
