@@ -4,4 +4,5 @@
 from asta.array import Array
 from asta.tensor import Tensor
 from asta.scalar import Scalar
+from asta.imports import bind, refresh
 from asta.decorators import typechecked
