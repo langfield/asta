@@ -7,8 +7,8 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 
 import numpy as np
 
-from asta.utils import is_subtuple, get_shape_rep, shapecheck
-from asta.scalar import Scalar
+from asta.utils import get_shape_rep, shapecheck
+from asta.parser import parse_subscript
 from asta.classes import SubscriptableMeta, GenericMeta
 from asta.constants import (
     EllipsisType,
@@ -30,6 +30,12 @@ class _ArrayMeta(SubscriptableMeta):
     @abstractmethod
     def _after_subscription(cls, item: Any) -> None:
         """ Method signature for subscript argument processing. """
+        raise NotImplementedError
+
+    @staticmethod
+    @abstractmethod
+    def get_dtype(item: Any) -> Tuple[Optional[np.dtype], str]:
+        """ Computes dtype. """
         raise NotImplementedError
 
     def __getitem__(cls, item: Any) -> GenericMeta:
@@ -89,7 +95,7 @@ class _ArrayMeta(SubscriptableMeta):
 class _Array(metaclass=_ArrayMeta):
     """ This class exists to keep the Array class as clean as possible. """
 
-    _DIM_TYPES: List[type] = DIM_TYPES
+    DIM_TYPES: List[type] = DIM_TYPES
     _UNSIZED_TYPE_KINDS: Dict[type, str] = NP_UNSIZED_TYPE_KINDS
 
     kind: str = ""
@@ -99,8 +105,8 @@ class _Array(metaclass=_ArrayMeta):
     def __new__(cls, *args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         raise TypeError("Cannot instantiate abstract class 'Array'.")
 
-    @classmethod
-    def get_dtype(cls, item: Any) -> Tuple[Optional[np.dtype], str]:
+    @staticmethod
+    def get_dtype(item: Any) -> Tuple[Optional[np.dtype], str]:
         """ Computes dtype. """
         dtype = None
         kind = ""
@@ -111,9 +117,9 @@ class _Array(metaclass=_ArrayMeta):
 
         # Case where ``item`` is a python3 type (``Array[int]``).
         elif isinstance(item, type):
-            if item in cls._UNSIZED_TYPE_KINDS:
+            if item in NP_UNSIZED_TYPE_KINDS:
                 generic_type = item
-                kind = cls._UNSIZED_TYPE_KINDS[item]
+                kind = NP_UNSIZED_TYPE_KINDS[item]
             elif item == datetime.datetime:
                 generic_type = np.datetime64
             elif item == datetime.timedelta:
@@ -124,76 +130,12 @@ class _Array(metaclass=_ArrayMeta):
 
         return dtype, kind
 
-    @staticmethod
-    def get_shape(item: Tuple) -> Optional[Tuple]:
-        """ Compute shape from a shape tuple argument. """
-        shape: Optional[Tuple] = None
-
-        if item:
-            if Scalar not in item and () not in item:
-                shape = item
-            elif item in [(Scalar,), ((),)]:
-                shape = ()
-            else:
-                none_err = "Too many 'None' arguments. "
-                none_err += "Use 'Array[None]' for scalar arrays."
-                raise TypeError(none_err)
-
-        # ``((1,2,3),)`` -> ``(1,2,3)``.
-        if isinstance(shape, tuple) and len(shape) == 1 and isinstance(shape[0], tuple):
-            shape = shape[0]
-
-        return shape
-
     @classmethod
     def _after_subscription(
         cls, item: Union[type, Optional[Union[int, EllipsisType]]]  # type: ignore
     ) -> None:
         """ Set class attributes based on the passed dtype/dim data. """
-
-        err = f"Invalid dimension '{item}' of type '{type(item)}'. "
-        err += f"Valid dimension types: {cls._DIM_TYPES}"
-
-        if isinstance(item, (type, np.dtype)) and item != Scalar:
-            cls.dtype, cls.kind = _Array.get_dtype(item)
-            cls.shape = None
-
-        # Case where dtype is Any and shape is scalar.
-        elif item in (Scalar, ()):
-            cls.shape = ()
-
-        # Case where dtype is not passed in, and there's one input.
-        # i.e. ``Array[1]`` or ``Array[...]``.
-        elif not isinstance(item, tuple):
-            if type(item) not in cls._DIM_TYPES:
-                raise TypeError(err)
-            cls.shape = (item,)
-
-        # Case where ``item`` is a nonempty tuple.
-        elif item:
-
-            # Case where generic type is specified.
-            if isinstance(item[0], (type, np.dtype)) and item[0] != Scalar:
-                cls.dtype, cls.kind = _Array.get_dtype(item[0])
-                for i, dim in enumerate(item[1:]):
-                    if type(dim) not in cls._DIM_TYPES:
-                        err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
-                        err += f"Valid dimension types: {cls._DIM_TYPES}"
-                        raise TypeError(err)
-                cls.shape = SubscriptableMeta.get_shape(item[1:])
-
-            # Case where generic type is unspecified.
-            else:
-                for i, dim in enumerate(item):
-                    if type(dim) not in cls._DIM_TYPES:
-                        err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
-                        err += f"Valid dimension types: {cls._DIM_TYPES}"
-                        raise TypeError(err)
-                cls.shape = SubscriptableMeta.get_shape(item)
-        else:
-            empty_err = "Argument to 'Array[]' cannot be empty tuple. "
-            empty_err += "Use 'Array[None]' to indicate a scalar."
-            raise TypeError(empty_err)
-
-        if isinstance(cls.shape, tuple) and is_subtuple((..., ...), cls.shape)[0]:
-            raise TypeError("Invalid shape: repeated '...'")
+        dtype, shape, kind = parse_subscript(cls, item, np.dtype)
+        cls.dtype = dtype
+        cls.shape = shape
+        cls.kind = kind
