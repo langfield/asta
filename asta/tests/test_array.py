@@ -28,6 +28,13 @@ def test_array_is_reflexive() -> None:
     assert Array[int, 1, 2, 3] == Array[int, 1, 2, 3]
     assert Array[int, 1, 2, 3] != Array[str, 1, 2, 3]
     assert Array[int, 1, 2, 3] != Array[int, 1, 2, 4]
+    assert Array[(1, 2, 3)] == Array[(1, 2, 3)]
+    assert Array[(1, 2, 3)] == Array[1, 2, 3]
+    assert Array[(1, 2, 3)] != Array[(1, 2, 4)]
+    assert Array[int, (1, 2, 3)] == Array[int, (1, 2, 3)]
+    assert Array[int, (1, 2, 3)] == Array[int, 1, 2, 3]
+    assert Array[int, (1, 2, 3)] != Array[str, (1, 2, 3)]
+    assert Array[int, (1, 2, 3)] != Array[int, (1, 2, 4)]
 
 
 def test_array_fails_instantiation() -> None:
@@ -155,7 +162,9 @@ def test_array_passes_generic_isinstance(arr: Array) -> None:
     assert not isinstance(arr, Array[None, None])
     if arr.shape:
         arg: tuple = (arr.dtype,) + arr.shape
+        wrapped: tuple = (arr.dtype,) + (arr.shape,)
         assert isinstance(arr, Array[arg])
+        assert isinstance(arr, Array[wrapped])
 
 
 @given(hnp.arrays(dtype=hnp.scalar_dtypes(), shape=tuple()))

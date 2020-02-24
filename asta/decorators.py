@@ -36,6 +36,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         for i, arg in enumerate(args):
             name = param_names[i]
             param = sig.parameters[name]
+            print("Param annotation:", param.annotation)
             if isinstance(param.annotation, (_ArrayMeta, _TensorMeta)):
                 if not isinstance(arg, param.annotation):
                     type_err = f"Argument value for parameter '{param.name}' "
@@ -54,6 +55,9 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
             print(f"PASSED: Return matched return type '{sig.return_annotation}'.")
 
         return ret
+
+    _wrapper.__module__ = decorated.__module__
+    _wrapper.__name__ = decorated.__name__
 
     if "ASTA_TYPECHECK" in os.environ and os.environ["ASTA_TYPECHECK"] == "1":
         return _wrapper

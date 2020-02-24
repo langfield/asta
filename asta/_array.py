@@ -29,6 +29,14 @@ class _ArrayMeta(SubscriptableMeta):
         """ Defer to ``typish``, which calls ``cls._after_subscription()``. """
         return SubscriptableMeta.__getitem__(cls, item)
 
+    def __eq__(cls, other: Any) -> bool:
+        """ If the dtypes and shapes match, they should be equal. """
+        if not isinstance(other, _ArrayMeta):
+            return False
+        if cls.shape != other.shape or cls.dtype != other.dtype:
+            return False
+        return True
+
     def __repr__(cls) -> str:
         """ String representation of ``Array`` class. """
         assert hasattr(cls, "shape")
@@ -123,6 +131,10 @@ class _Array(metaclass=_ArrayMeta):
                 none_err = "Too many 'None' arguments. "
                 none_err += "Use 'Array[None]' for scalar arrays."
                 raise TypeError(none_err)
+
+        # ``((1,2,3),)`` -> ``(1,2,3)``.
+        if isinstance(shape, tuple) and len(shape) == 1 and isinstance(shape[0], tuple):
+            shape = shape[0]
 
         return shape
 

@@ -27,6 +27,14 @@ class _TensorMeta(SubscriptableMeta):
         """ Defer to the metaclass which calls ``cls._after_subscription()``. """
         return SubscriptableMeta.__getitem__(cls, item)
 
+    def __eq__(cls, other: Any) -> bool:
+        """ If the dtypes and shapes match, they should be equal. """
+        if not isinstance(other, _TensorMeta):
+            return False
+        if cls.shape != other.shape or cls.dtype != other.dtype:
+            return False
+        return True
+
     def __repr__(cls) -> str:
         """ String representation of ``Tensor`` class. """
         assert hasattr(cls, "shape")
@@ -110,6 +118,10 @@ class _Tensor(metaclass=_TensorMeta):
                 none_err = "Too many 'None' arguments. "
                 none_err += "Use 'Array[None]' for scalar arrays."
                 raise TypeError(none_err)
+
+        # ``((1,2,3),)`` -> ``(1,2,3)``.
+        if isinstance(shape, tuple) and len(shape) == 1 and isinstance(shape[0], tuple):
+            shape = shape[0]
 
         return shape
 
