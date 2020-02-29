@@ -282,6 +282,8 @@ Todo
   not needed in ``decorators.py``.
 - Consider removing library-specific metaclasses.
 - Consider making ``parse_subscript`` a classmethod of ``SubscriptableMeta``.
+- Remove numpy, torch, tensorflow from requirements. You should be able to ues
+  ``Array`` without torch installed.
 
 Acknowledgements
 ----------------
