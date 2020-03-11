@@ -288,6 +288,9 @@ Todo
   raised. But when you then try to use/subscript Tensor, an error should be
   raised. So it should still be a subscriptable type, but the subscription
   method should try to import torch.
+- Consider adding a ``soft`` mode where the decorator only prints errors
+  instead of raising them, so that a user could see and correct all of them at
+  once.
 
 
 Acknowledgements
