@@ -9,7 +9,6 @@ from typing import Any, Tuple, Dict
 import asta.dims
 from asta.dims import Placeholder
 from asta.array import Array
-from asta.tensor import Tensor
 from asta._array import _ArrayMeta
 from asta.classes import SubscriptableMeta
 from asta.constants import _TORCH_IMPORTED
@@ -17,6 +16,7 @@ from asta.constants import _TORCH_IMPORTED
 
 METAMAP: Dict[type, Any] = {_ArrayMeta: Array}
 if _TORCH_IMPORTED:
+    from asta.tensor import Tensor
     from asta._tensor import _TensorMeta
 
     METAMAP[_TensorMeta] = Tensor

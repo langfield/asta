@@ -1,12 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Support for typing PyTorch tensors. """
-from asta.constants import torch, _TORCH_IMPORTED
-
-if _TORCH_IMPORTED:
-    from asta._tensor import _Tensor
-else:
-    _Tensor = type  # type: ignore
+import torch
+from asta._tensor import _Tensor
 
 
 class Tensor(_Tensor, torch.Tensor):
@@ -36,6 +32,6 @@ class Tensor(_Tensor, torch.Tensor):
         ``Tensor[int, 1, 2, ...]``
     """
 
-    def __ipow__(cls, other: torch.Tensor) -> torch.Tensor:
+    def __ipow__(self, other: torch.Tensor) -> torch.Tensor:
         """ In-place augmented arithmetic method for exponentiation (``**=``). """
         raise NotImplementedError
