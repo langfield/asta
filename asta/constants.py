@@ -11,6 +11,13 @@ try:
     _TORCH_IMPORTED = True
 except ImportError:
     pass
+_TENSORFLOW_IMPORTED = False
+try:
+    import tensorflow
+
+    _TENSORFLOW_IMPORTED = True
+except ImportError:
+    pass
 
 
 # pylint: disable=invalid-name, too-few-public-methods
