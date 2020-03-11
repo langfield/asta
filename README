@@ -265,7 +265,7 @@ Todo
 - Consider overriding the ``__getitem__()`` function to allow for kwargs.
 - Consider adding a delimiter in the typecheck decorator output to distinguish
   the typecheck passes between different functions and signatures. Something
-  like ``================<asta.typechecked_function()>================``.
+  like ``===============<asta.typechecked_function()>===============``. (DONE)
 - Consider adding support for tensorflow.
 - Consider adding support for passing ``()`` as in ``Array[int, ()]`` to denote
   scalar arrays instead of ``Scalar`` or ``None``. (DONE)
