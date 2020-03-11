@@ -48,15 +48,15 @@ class _TensorMeta(SubscriptableMeta):
         assert hasattr(cls, "shape")
         assert hasattr(cls, "dtype")
         if cls.shape is None and cls.dtype is None:
-            rep = f"<asta.Tensor>"
+            rep = f"<asta.tensor.Tensor>"
         elif cls.shape is None and cls.dtype is not None:
-            rep = f"<asta.Tensor[{cls.dtype}]>"
+            rep = f"<asta.tensor.Tensor[{cls.dtype}]>"
         elif cls.shape is not None and cls.dtype is None:
             shape_rep = get_shape_rep(cls.shape)
-            rep = f"<asta.Tensor[{shape_rep}]>"
+            rep = f"<asta.tensor.Tensor[{shape_rep}]>"
         else:
             shape_rep = get_shape_rep(cls.shape)
-            rep = f"<asta.Tensor[{cls.dtype}, {shape_rep}]>"
+            rep = f"<asta.tensor.Tensor[{cls.dtype}, {shape_rep}]>"
 
         return rep
 
