@@ -12,7 +12,7 @@ from asta.parser import parse_subscript
 from asta.classes import SubscriptableMeta, GenericMeta
 from asta.constants import (
     EllipsisType,
-    DIM_TYPES,
+    NUMPY_DIM_TYPES,
     NP_UNSIZED_TYPE_KINDS,
 )
 
@@ -95,7 +95,7 @@ class _ArrayMeta(SubscriptableMeta):
 class _Array(metaclass=_ArrayMeta):
     """ This class exists to keep the Array class as clean as possible. """
 
-    DIM_TYPES: List[type] = DIM_TYPES
+    DIM_TYPES: List[type] = NUMPY_DIM_TYPES
     _UNSIZED_TYPE_KINDS: Dict[type, str] = NP_UNSIZED_TYPE_KINDS
 
     kind: str = ""

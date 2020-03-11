@@ -13,6 +13,7 @@ class Placeholder:
 
     def __init__(self, name: str) -> None:
         self.name = name
+        self.unpacked = False
 
     def __repr__(self) -> str:
         """ String representation of placeholder. """
@@ -20,7 +21,8 @@ class Placeholder:
 
     def __iter__(self) -> object:
         """ Make sure instances can be unpacked. """
-        return self
+        self.unpacked = True
+        yield self
 
     def __next__(self) -> None:
         """ Instances are empty iterators. """
