@@ -49,3 +49,12 @@ class Tensor(metaclass=UnusableMeta):
     def _import(cls) -> None:
         """ Attempts to import the dependency so a meaningful ImportError is shown. """
         import torch
+
+
+class TFTensor(metaclass=UnusableMeta):
+    """ A dummy class for use when ``tensorflow`` is not installed. """
+
+    @classmethod
+    def _import(cls) -> None:
+        """ Attempts to import the dependency so a meaningful ImportError is shown. """
+        import tensorflow

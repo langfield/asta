@@ -4,4 +4,4 @@
 from asta.array import Array
 from asta.scalar import Scalar
 from asta.decorators import typechecked
-from asta.switchboard import Tensor
+from asta.switchboard import Tensor, TFTensor
