@@ -1,15 +1,47 @@
 """ asta.constants """
 import datetime
 from typing import Dict, List, Any
-import torch
 import numpy as np
-
 from asta.dims import Placeholder
+
+_TORCH_IMPORTED = False
+try:
+    import torch
+
+    _TORCH_IMPORTED = True
+except ImportError:
+    pass
+
 
 # pylint: disable=invalid-name, too-few-public-methods
 
 
 # Metaclasses.
+class NonInstanceMeta(type):
+    """ Metaclass for ``NonInstanceType``. """
+
+    def __instancecheck__(cls, inst: Any) -> bool:
+        """ No object is an instance of this type. """
+        return False
+
+
+class NonInstanceType(metaclass=NonInstanceMeta):
+    """ No object is an instance of this class. """
+
+
+class TorchModule:
+    """ A dummy torch module for when torch is not installed. """
+
+    def __init__(self) -> None:
+        self.Tensor = object
+        self.Size = NonInstanceType
+        self.dtype = NonInstanceType
+        self.int32 = NonInstanceType
+        self.float32 = NonInstanceType
+        self.bool = NonInstanceType
+        self.uint8 = NonInstanceType
+
+
 class ScalarMeta(type):
     """ A meta class for the ``Scalar`` class. """
 
@@ -28,6 +60,10 @@ class ScalarMeta(type):
             if isinstance(inst, generic_type):
                 return True
         return False
+
+
+if not _TORCH_IMPORTED:
+    torch = TorchModule()
 
 
 # Types.

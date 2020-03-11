@@ -5,9 +5,8 @@ This module contains class implementations.
 """
 import types
 from abc import abstractmethod
-from typing import TypeVar, Generic, Any, Union, Optional, Tuple, List
+from typing import TypeVar, Generic, Any, Optional, Tuple, List
 
-import torch
 import numpy as np
 from asta.scalar import Scalar
 
@@ -21,7 +20,7 @@ class GenericMeta(type, Generic[T]):
 
     kind: str
     shape: tuple
-    dtype: Union[np.dtype, torch.dtype]
+    dtype: Any
 
     @classmethod
     @abstractmethod

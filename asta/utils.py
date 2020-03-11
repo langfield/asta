@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 """ This module contains meta functionality for the ``Array`` type. """
 import random
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Any
 
-import torch
-from asta.constants import EllipsisType
+from asta.constants import EllipsisType, torch, _TORCH_IMPORTED
 
 # pylint: disable=too-many-boolean-expressions
 
@@ -153,11 +152,9 @@ def wildcard_eq(
     return True
 
 
-def rand_split_shape(
-    shape: Union[Tuple[int, ...], torch.Size]
-) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
+def rand_split_shape(shape: Any) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
     """ Splits a shape and removes a nonempty continguous portion. """
-    if isinstance(shape, torch.Size):
+    if _TORCH_IMPORTED and isinstance(shape, torch.Size):
         shape = tuple(shape)
     start = random.randrange(len(shape))
     end = random.randint(start + 1, len(shape))
