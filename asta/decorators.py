@@ -72,6 +72,15 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         """ Decorated/typechecked function. """
         annotations = decorated.__annotations__
 
+        header = f"<asta::@typechecked::{decorated.__module__}.{decorated.__name__}()>"
+        min_pad_size = 10
+        pad_size = 80 - len(header)
+        side_size = max(pad_size // 2, min_pad_size)
+        pad_parity = pad_size % 2 if side_size > 10 else 0
+        left_padding = "=" * side_size
+        right_padding = "=" * (side_size + pad_parity)
+        print(f"{left_padding}{header}{right_padding}")
+
         # Check positional arguments.
         for i, arg in enumerate(args):
             name = list(annotations.keys())[i]
