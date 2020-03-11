@@ -12,7 +12,7 @@ from asta.scalar import Scalar
 from asta.classes import SubscriptableMeta, GenericMeta
 from asta.constants import (
     EllipsisType,
-    DIM_TYPES,
+    TORCH_DIM_TYPES,
     TORCH_DTYPE_MAP,
 )
 
@@ -48,15 +48,16 @@ class _TensorMeta(SubscriptableMeta):
         assert hasattr(cls, "shape")
         assert hasattr(cls, "dtype")
         if cls.shape is None and cls.dtype is None:
-            rep = f"<asta.tensor.Tensor>"
+            rep = f"<asta.Tensor>"
         elif cls.shape is None and cls.dtype is not None:
-            rep = f"<asta.tensor.Tensor[{cls.dtype}]>"
+            # TODO: Treat ``torch.Size`` objects.
+            rep = f"<asta.Tensor[{cls.dtype}]>"
         elif cls.shape is not None and cls.dtype is None:
             shape_rep = get_shape_rep(cls.shape)
-            rep = f"<asta.tensor.Tensor[{shape_rep}]>"
+            rep = f"<asta.Tensor[{shape_rep}]>"
         else:
             shape_rep = get_shape_rep(cls.shape)
-            rep = f"<asta.tensor.Tensor[{cls.dtype}, {shape_rep}]>"
+            rep = f"<asta.Tensor[{cls.dtype}, {shape_rep}]>"
 
         return rep
 
@@ -82,7 +83,7 @@ class _TensorMeta(SubscriptableMeta):
 class _Tensor(metaclass=_TensorMeta):
     """ This class exists to keep the Tensor class as clean as possible. """
 
-    _DIM_TYPES: List[type] = DIM_TYPES
+    _DIM_TYPES: List[type] = TORCH_DIM_TYPES
     _TORCH_DTYPE_MAP: Dict[type, torch.dtype] = TORCH_DTYPE_MAP
 
     dtype: Optional[torch.dtype] = None

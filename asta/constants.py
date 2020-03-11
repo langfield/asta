@@ -23,7 +23,7 @@ except ImportError:
 # pylint: disable=invalid-name, too-few-public-methods
 
 
-# Metaclasses.
+# Classes and metaclasses.
 class NonInstanceMeta(type):
     """ Metaclass for ``NonInstanceType``. """
 
@@ -40,7 +40,7 @@ class TorchModule:
     """ A dummy torch module for when torch is not installed. """
 
     def __init__(self) -> None:
-        self.Tensor = object
+        self.Tensor = NonInstanceType
         self.Size = NonInstanceType
         self.dtype = NonInstanceType
         self.int32 = NonInstanceType
@@ -69,6 +69,20 @@ class ScalarMeta(type):
         return False
 
 
+class Color:
+    """ Terminal color string literals. """
+    PURPLE = "\033[95m"
+    CYAN = "\033[96m"
+    DARKCYAN = "\033[36m"
+    BLUE = "\033[94m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
+    END = "\033[0m"
+
+
 if not _TORCH_IMPORTED:
     torch = TorchModule()
 
@@ -87,12 +101,21 @@ GENERIC_TYPES: List[type] = [
 ]
 NoneType = type(None)
 EllipsisType = type(Ellipsis)
-DIM_TYPES: List[type] = [
+NUMPY_DIM_TYPES: List[type] = [
     int,
     ScalarMeta,
     EllipsisType,
     NoneType,  # type: ignore[misc]
     tuple,
+    Placeholder,
+]
+TORCH_DIM_TYPES: List[type] = [
+    int,
+    ScalarMeta,
+    EllipsisType,
+    NoneType,  # type: ignore[misc]
+    tuple,
+    torch.Size,
     Placeholder,
 ]
 NP_UNSIZED_TYPE_KINDS: Dict[type, str] = {bytes: "S", str: "U", object: "O"}
