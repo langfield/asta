@@ -11,11 +11,15 @@ from asta.dims import Placeholder
 from asta.array import Array
 from asta.tensor import Tensor
 from asta._array import _ArrayMeta
-from asta._tensor import _TensorMeta
 from asta.classes import SubscriptableMeta
+from asta.constants import _TORCH_IMPORTED
 
 
-METAMAP = {_ArrayMeta: Array, _TensorMeta: Tensor}
+METAMAP: Dict[type, Any] = {_ArrayMeta: Array}
+if _TORCH_IMPORTED:
+    from asta._tensor import _TensorMeta
+
+    METAMAP[_TensorMeta] = Tensor
 
 
 def refresh(annotation: SubscriptableMeta) -> SubscriptableMeta:
@@ -34,10 +38,11 @@ def refresh(annotation: SubscriptableMeta) -> SubscriptableMeta:
         assert len(dimvars) == len(shape)
         shape = tuple(dimvars)
 
+    # Note we're guaranteed that ``annotation`` has type ``SubscriptableMeta``.
     subscriptable_class = METAMAP[type(annotation)]
 
     if shape is not None:
-        annotation = subscriptable_class[dtype, shape]  # type: ignore
+        annotation = subscriptable_class[dtype, shape]
     else:
         annotation = subscriptable_class[dtype]
 

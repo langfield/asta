@@ -244,7 +244,7 @@ Todo
 - Consider dropping the ``Scalar`` object. The less unfamiliar objects, the
   better. (NO)
 - Add more descriptive error if you pass torch dtype for an Array or numpy
-  dtype for a Tensor.
+  dtype for a Tensor. (DONE)
 - Add ``CudaTensor`` class.
 - Consider adding support for arbitrary shape/type constraints as subscript
   arguments. They would be of the form:
@@ -282,8 +282,13 @@ Todo
   not needed in ``decorators.py``.
 - Consider removing library-specific metaclasses.
 - Consider making ``parse_subscript`` a classmethod of ``SubscriptableMeta``.
-- Remove numpy, torch, tensorflow from requirements. You should be able to ues
-  ``Array`` without torch installed.
+- Remove torch, tensorflow from requirements. You should be able to ues
+  ``Array`` without torch installed. (DONE)
+- When you try to import Tensor when torch is not installed, no error should be
+  raised. But when you then try to use/subscript Tensor, an error should be
+  raised. So it should still be a subscriptable type, but the subscription
+  method should try to import torch.
+
 
 Acknowledgements
 ----------------

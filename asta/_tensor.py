@@ -5,6 +5,7 @@ from abc import abstractmethod
 from typing import List, Optional, Any, Tuple, Dict, Union
 
 import torch
+import numpy as np
 
 from asta.utils import is_subtuple, get_shape_rep, shapecheck
 from asta.scalar import Scalar
@@ -99,6 +100,13 @@ class _Tensor(metaclass=_TensorMeta):
         if isinstance(item, torch.dtype):
             dtype = item
 
+        elif isinstance(item, np.dtype):
+            np_dtype_err = f"Invalid type argument '{item}'. "
+            np_dtype_err += f"Numpy dtypes not supported for Tensor class. "
+            np_dtype_err += f"Type arguments must be torch dtypes or in "
+            np_dtype_err += f"'{list(cls._TORCH_DTYPE_MAP.keys())}'."
+            raise TypeError(np_dtype_err)
+
         # Case where ``item`` is a python3 type (``Tensor[int]``).
         elif isinstance(item, type):
             generic_type = item
@@ -141,7 +149,8 @@ class _Tensor(metaclass=_TensorMeta):
         err = f"Invalid dimension '{item}' of type '{type(item)}'. "
         err += f"Valid dimension types: {cls._DIM_TYPES}"
 
-        if isinstance(item, (type, torch.dtype)) and item != Scalar:
+        # TODO: This is not sustainable because we need to check for tf as well.
+        if isinstance(item, (type, np.dtype, torch.dtype)) and item != Scalar:
             cls.dtype = _Tensor.get_dtype(item)
             cls.shape = None
 
