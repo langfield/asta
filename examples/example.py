@@ -45,6 +45,7 @@ def main() -> None:
     div = dangerous_kl(action_distribution, optimal_distribution)
 
     # TypeError raised in ``safe_kl()``, which sees an unexpected shape.
+    print("A TypeError is raised in the safe version when we pass wrong inputs.")
     div = safe_kl(action_distribution, optimal_distribution)
 
 

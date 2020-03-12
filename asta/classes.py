@@ -4,23 +4,23 @@ PRIVATE MODULE: do not import (from) it directly.
 This module contains class implementations.
 """
 import types
-from abc import ABC, abstractmethod
-from typing import TypeVar, Generic, Any, Union
+from abc import abstractmethod
+from typing import TypeVar, Generic, Any, Optional, Tuple, List
 
-import torch
 import numpy as np
+from asta.scalar import Scalar
 
 # pylint: disable=too-few-public-methods
 
 T = TypeVar("T")
 
 
-class SubscriptableType(ABC):
-    """ Abstract base class for subscriptable types. """
+class GenericMeta(type, Generic[T]):
+    """ Abstract base metaclass for subscriptable types. """
 
     kind: str
     shape: tuple
-    dtype: Union[np.dtype, torch.dtype]
+    dtype: Any
 
     @classmethod
     @abstractmethod
@@ -29,11 +29,11 @@ class SubscriptableType(ABC):
         raise NotImplementedError
 
 
-class SubscriptableMeta(type, Generic[T]):
+class SubscriptableMeta(GenericMeta):
     """
     This metaclass will allow a type to become subscriptable.
 
-    >>> class SomeType(metaclass=SubscriptableType):
+    >>> class SomeType(metaclass=GenericMeta):
     ...     pass
     >>> SomeTypeSub = SomeType['some args']
     >>> SomeTypeSub.__args__
@@ -41,6 +41,8 @@ class SubscriptableMeta(type, Generic[T]):
     >>> SomeTypeSub.__origin__.__name__
     'SomeType'
     """
+
+    DIM_TYPES: List[type]
 
     __args__: Any
     __origin__: Any
@@ -50,14 +52,27 @@ class SubscriptableMeta(type, Generic[T]):
         cls.__args__ = None
         cls.__origin__ = None
 
-    def __getitem__(cls, item: Any) -> SubscriptableType:
+    @classmethod
+    @abstractmethod
+    def _after_subscription(cls, item: Any) -> None:
+        """ Method signature for subscript argument processing. """
+        raise NotImplementedError
+
+    @staticmethod
+    @abstractmethod
+    def get_dtype(item: Any) -> Tuple[Optional[np.dtype], str]:
+        """ Computes dtype. """
+        raise NotImplementedError
+
+    def __getitem__(cls, item: Any) -> GenericMeta:
         body = {
             **cls.__dict__,
             "__args__": item,
             "__origin__": cls,
         }
         bases = cls, *cls.__bases__
-        result: SubscriptableType = type(cls.__name__, bases, body)  # type: ignore
+        result: GenericMeta = type(cls.__name__, bases, body)  # type: ignore
+
         if hasattr(result, "_after_subscription"):
 
             # Verify it is not a staticmethod.
@@ -81,3 +96,24 @@ class SubscriptableMeta(type, Generic[T]):
         if not getattr(cls, "_hash", None):
             cls._hash = hash("{}{}".format(cls.__origin__, cls.__args__))
         return cls._hash
+
+    @staticmethod
+    def get_shape(item: Tuple) -> Optional[Tuple]:
+        """ Compute shape from a shape tuple argument. """
+        shape: Optional[Tuple] = None
+
+        if item != tuple() and item is not None:
+            if Scalar not in item and () not in item:
+                shape = item
+            elif item in [(Scalar,), ((),)]:
+                shape = ()
+            else:
+                none_err = "Too many 'None' arguments. "
+                none_err += "Use 'Array[None]' for scalar arrays."
+                raise TypeError(none_err)
+
+        # ``((1,2,3),)`` -> ``(1,2,3)``.
+        if isinstance(shape, tuple) and len(shape) == 1 and isinstance(shape[0], tuple):
+            shape = shape[0]
+
+        return shape

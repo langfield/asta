@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ This module contains meta functionality for the ``Tensor`` type. """
+from abc import abstractmethod
 from typing import List, Optional, Any, Tuple, Dict, Union
 
 import torch
+import numpy as np
 
 from asta.utils import is_subtuple, get_shape_rep, shapecheck
 from asta.scalar import Scalar
-from asta.classes import SubscriptableMeta, SubscriptableType
+from asta.classes import SubscriptableMeta, GenericMeta
 from asta.constants import (
     EllipsisType,
-    DIM_TYPES,
+    TORCH_DIM_TYPES,
     TORCH_DTYPE_MAP,
 )
 
@@ -23,7 +25,13 @@ class _TensorMeta(SubscriptableMeta):
     shape: tuple
     dtype: torch.dtype
 
-    def __getitem__(cls, item: Any) -> SubscriptableType:
+    @classmethod
+    @abstractmethod
+    def _after_subscription(cls, item: Any) -> None:
+        """ Method signature for subscript argument processing. """
+        raise NotImplementedError
+
+    def __getitem__(cls, item: Any) -> GenericMeta:
         """ Defer to the metaclass which calls ``cls._after_subscription()``. """
         return SubscriptableMeta.__getitem__(cls, item)
 
@@ -42,6 +50,7 @@ class _TensorMeta(SubscriptableMeta):
         if cls.shape is None and cls.dtype is None:
             rep = f"<asta.Tensor>"
         elif cls.shape is None and cls.dtype is not None:
+            # TODO: Treat ``torch.Size`` objects.
             rep = f"<asta.Tensor[{cls.dtype}]>"
         elif cls.shape is not None and cls.dtype is None:
             shape_rep = get_shape_rep(cls.shape)
@@ -74,7 +83,7 @@ class _TensorMeta(SubscriptableMeta):
 class _Tensor(metaclass=_TensorMeta):
     """ This class exists to keep the Tensor class as clean as possible. """
 
-    _DIM_TYPES: List[type] = DIM_TYPES
+    _DIM_TYPES: List[type] = TORCH_DIM_TYPES
     _TORCH_DTYPE_MAP: Dict[type, torch.dtype] = TORCH_DTYPE_MAP
 
     dtype: Optional[torch.dtype] = None
@@ -91,6 +100,13 @@ class _Tensor(metaclass=_TensorMeta):
         # Case where ``item`` is a dtype (``Tensor[torch.float64]``).
         if isinstance(item, torch.dtype):
             dtype = item
+
+        elif isinstance(item, np.dtype):
+            np_dtype_err = f"Invalid type argument '{item}'. "
+            np_dtype_err += f"Numpy dtypes not supported for Tensor class. "
+            np_dtype_err += f"Type arguments must be torch dtypes or in "
+            np_dtype_err += f"'{list(cls._TORCH_DTYPE_MAP.keys())}'."
+            raise TypeError(np_dtype_err)
 
         # Case where ``item`` is a python3 type (``Tensor[int]``).
         elif isinstance(item, type):
@@ -134,7 +150,8 @@ class _Tensor(metaclass=_TensorMeta):
         err = f"Invalid dimension '{item}' of type '{type(item)}'. "
         err += f"Valid dimension types: {cls._DIM_TYPES}"
 
-        if isinstance(item, (type, torch.dtype)) and item != Scalar:
+        # TODO: This is not sustainable because we need to check for tf as well.
+        if isinstance(item, (type, np.dtype, torch.dtype)) and item != Scalar:
             cls.dtype = _Tensor.get_dtype(item)
             cls.shape = None
 
