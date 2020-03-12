@@ -262,7 +262,7 @@ Todo
 
   The above constraint would only pass for shapes ``(n, 2n, 4n, 8n...)``.
   To enforce it, you would use ``Array[fn]``.
-- Consider overriding the ``__getitem__()`` function to allow for kwargs.
+- Consider allowing instantiation to support kwargs.
 - Consider adding a delimiter in the typecheck decorator output to distinguish
   the typecheck passes between different functions and signatures. Something
   like ``===============<asta.typechecked_function()>===============``. (DONE)
@@ -291,6 +291,38 @@ Todo
 - Consider adding a ``soft`` mode where the decorator only prints errors
   instead of raising them, so that a user could see and correct all of them at
   once.
+- Consider adding support for checking arbitrary attributes on arrays and
+  tensors. For example, if working on a reinforcement learning problem, and you
+  wanted to make sure all tensors have the same timestep index, you could seta
+  ``<torch.Tensor>.timestep: int`` attribute and then assert that they all
+  match at function call time.
+- This could have syntax like:
+
+    >>> def product(
+    >>>     t1: Tensor(float, 1,2,3, timestep=K),
+    >>>     t2: Tensor(float, 1,2,3, timestep=K + 1),
+    >>> ) -> Tensor(float, 1,2,3):
+
+  This would require implementing an ``__init__()`` for array classes, which
+  would just return an instance of the metaclass with the appropriate class
+  variables set. Alternatively, we could use a dictionary:
+
+    >>> def product(
+    >>>     t1: Tensor[float, 1,2,3, {"timestep": K}],
+    >>>     t2: Tensor[float, 1,2,3, {"timestep": K + 1}],
+    >>> ) -> Tensor[float, 1,2,3]:
+
+  This is much better because it doesn't break the convention of using
+  subscriptable objects for annotations.
+
+- This would also require an implementation of non-contant shapes/variables.
+  For example, if you know all your tensors will have length ``k``, but ``k``
+  is variable, then you import ``K`` from some asta namespace. This will return
+  a placeholder-like object with no set value. At typecheck time, it will be
+  inferred from the first argument checked which makes use of this variable.
+  The typechecker will assert that all other instances of ``K`` have the same
+  value as this initialized one, and if soft checking is enabled, it will print
+  out all of them along with an error message.
 
 
 Acknowledgements
