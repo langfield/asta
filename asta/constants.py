@@ -3,6 +3,7 @@ import datetime
 from typing import Dict, List, Any
 import numpy as np
 from asta.dims import Placeholder
+from asta.vdims import VariablePlaceholder
 
 _TORCH_IMPORTED = False
 try:
@@ -102,6 +103,8 @@ GENERIC_TYPES: List[type] = [
 ]
 NoneType = type(None)
 EllipsisType = type(Ellipsis)
+
+# TODO: Fix code duplication below. Add COMMON DIM TYPES.
 NUMPY_DIM_TYPES: List[type] = [
     int,
     ScalarMeta,
@@ -109,6 +112,7 @@ NUMPY_DIM_TYPES: List[type] = [
     NoneType,  # type: ignore[misc]
     tuple,
     Placeholder,
+    VariablePlaceholder,
 ]
 TORCH_DIM_TYPES: List[type] = [
     int,
@@ -118,6 +122,7 @@ TORCH_DIM_TYPES: List[type] = [
     tuple,
     torch.Size,
     Placeholder,
+    VariablePlaceholder,
 ]
 NP_UNSIZED_TYPE_KINDS: Dict[type, str] = {bytes: "S", str: "U", object: "O"}
 NP_GENERIC_TYPES: List[type] = [
