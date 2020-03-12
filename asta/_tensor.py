@@ -75,7 +75,7 @@ class _TensorMeta(SubscriptableMeta):
 
             # Handle ellipses.
             elif cls.shape is not None:
-                match = shapecheck(inst.shape, cls.shape)
+                match, _ = shapecheck(inst.shape, cls.shape)
 
         return match
 

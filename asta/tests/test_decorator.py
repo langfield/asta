@@ -6,7 +6,7 @@ import pytest
 import numpy as np
 from asta import Array, Tensor, typechecked
 
-os.environ["ASTA_TYPECHECK"] = "1"
+os.environ["ASTA_TYPECHECK"] = "2"
 
 
 @typechecked

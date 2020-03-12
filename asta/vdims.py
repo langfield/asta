@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" A module for programmatically storing dimension sizes for annotations. """
-from typing import Dict, Any
+""" Implements variable dimension sizes for annotations. """
+from typing import Any
 
 # pylint: disable=redefined-outer-name, too-few-public-methods, no-self-use
 
-dims: Dict[str, Any]
 
-
-class Placeholder:
-    """ Placeholder for annotation dimensions. """
+class VariablePlaceholder:
+    """ Placeholder for variable annotation dimensions. """
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -31,19 +29,9 @@ class Placeholder:
 
 def __getattr__(name: str) -> Any:
     """ Yields the dims. """
-    try:
-        try:
-            return dims[name]
-        except KeyError:
-            return Placeholder(name)
-    except NameError:
-        return Placeholder(name)
+    return VariablePlaceholder(name)
 
 
 def __setattr__(name: str, value: Any) -> None:
     """ Sets the dims. """
-    try:
-        dims
-    except NameError:
-        dims = {}
-    dims[name] = value
+    raise NameError("Can't set attribute for variable dims.")

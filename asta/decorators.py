@@ -5,19 +5,21 @@ This module contains decorators.
 """
 import os
 import inspect
-from typing import Any, Tuple, Dict
+from typing import Any, Tuple, Dict, Set
 
 import numpy as np
 
 import asta.dims
 from asta.dims import Placeholder
+from asta.vdims import VariablePlaceholder
+from asta.utils import shapecheck
 from asta.array import Array
 from asta._array import _ArrayMeta
 from asta.classes import SubscriptableMeta
 from asta.constants import torch, Color, _TORCH_IMPORTED
 
 
-METAMAP: Dict[type, Any] = {_ArrayMeta: Array}
+METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
 if _TORCH_IMPORTED:
     from asta.tensor import Tensor
     from asta._tensor import _TensorMeta
@@ -25,11 +27,15 @@ if _TORCH_IMPORTED:
     METAMAP[_TensorMeta] = Tensor
 
 
-def refresh(annotation: SubscriptableMeta) -> SubscriptableMeta:
+def refresh(
+    annotation: SubscriptableMeta, vdims: Dict[VariablePlaceholder, int], halt: bool,
+) -> Tuple[SubscriptableMeta, bool]:
     """ Load an asta type annotation containing placeholders. """
     dtype = annotation.dtype
     shape = annotation.shape
     dimvars = []
+    initialized = True
+    uninitialized_placeholder_names: Set[str] = set()
 
     if annotation.shape is not None:
         for dim in annotation.shape:
@@ -37,12 +43,31 @@ def refresh(annotation: SubscriptableMeta) -> SubscriptableMeta:
                 placeholder = dim
                 dimvar = getattr(asta.dims, placeholder.name)
 
+                # Catch uninitialized placeholders.
+                if isinstance(dimvar, Placeholder):
+                    initialized = False
+                    name = placeholder.name
+                    if name not in uninitialized_placeholder_names:
+                        fail_uninitialized(name, annotation, halt=halt)
+                    uninitialized_placeholder_names.add(name)
+
                 # Handle case where placeholder is unpacked in annotation.
                 if placeholder.unpacked:
                     for elem in dimvar:
                         dimvars.append(elem)
                 else:
                     dimvars.append(dimvar)
+            elif isinstance(dim, VariablePlaceholder):
+                vdim = dim
+
+                # Add variable dimension if it has already been set.
+                if vdim in vdims:
+                    dimvar = vdims[vdim]
+                    dimvars.append(dimvar)
+
+                # Otherwise, add a wildcard.
+                else:
+                    dimvars.append(-1)
             else:
                 dimvars.append(dim)
         assert len(dimvars) == len(shape)
@@ -51,12 +76,46 @@ def refresh(annotation: SubscriptableMeta) -> SubscriptableMeta:
     # Note we're guaranteed that ``annotation`` has type ``SubscriptableMeta``.
     subscriptable_class = METAMAP[type(annotation)]
 
+    refreshed_annotation: SubscriptableMeta
     if shape is not None:
-        annotation = subscriptable_class[dtype, shape]
+        refreshed_annotation = subscriptable_class[dtype, shape]  # type: ignore
     else:
-        annotation = subscriptable_class[dtype]
+        refreshed_annotation = subscriptable_class[dtype]
 
-    return annotation
+    return refreshed_annotation, initialized
+
+
+def update_vplaceholders(
+    vdims: Dict[VariablePlaceholder, int],
+    annotation: SubscriptableMeta,
+    unrefreshed: SubscriptableMeta,
+    arg: Any,
+) -> Dict[VariablePlaceholder, int]:
+    """ Returns an updated copy of vdims with actual values inserted. """
+    # Copy the input vdims.
+    updated_vdims: Dict[VariablePlaceholder, int] = vdims.copy()
+
+    if annotation.shape is not None:
+        assert unrefreshed.shape is not None
+
+        # Handle case where type(shape) != tuple.
+        arg_shape = tuple(arg.shape)
+        assert not isinstance(arg_shape, torch.Size)
+
+        # Grab the pieces of the instance shape corresponding to annotation
+        # shape elements.
+        match, shape_pieces = shapecheck(arg_shape, annotation.shape)
+        assert match
+        assert len(annotation.shape) == len(unrefreshed.shape) == len(shape_pieces)
+
+        for dim, piece in zip(unrefreshed.shape, shape_pieces):
+            if isinstance(dim, VariablePlaceholder):
+                vdim = dim
+                assert len(piece) == 1
+                if vdim not in vdims:
+                    updated_vdims[vdim] = piece[0]
+
+    return updated_vdims
 
 
 def type_representation(arg: Any) -> str:
@@ -81,10 +140,40 @@ def pass_return(i: int, ann: SubscriptableMeta, rep: str) -> None:
     print(f"{passed}: Return {i} matched return type '{ann}' with actual type: '{rep}'")
 
 
+def fail_return(i: int, ann: SubscriptableMeta, rep: str, halt: bool) -> None:
+    """ Print/raise typecheck fail error for return values. """
+    failed = f"{Color.RED}FAILED{Color.END}"
+    type_err = f"{failed}: Return {i} has wrong type. Expected type: "
+    type_err += f"'{ann}' Actual type: '{rep}'"
+    if halt:
+        raise TypeError(type_err)
+    print(type_err)
+
+
 def pass_argument(name: str, ann: SubscriptableMeta, rep: str) -> None:
-    """ Print typecheck pass notification for return values. """
+    """ Print typecheck pass notification for arguments. """
     passed = f"{Color.GREEN}PASSED{Color.END}"
     print(f"{passed}: Arg '{name}' matched parameter '{ann}' with actual type: '{rep}'")
+
+
+def fail_argument(name: str, ann: SubscriptableMeta, rep: str, halt: bool) -> None:
+    """ Print/raise typecheck fail error for arguments. """
+    failed = f"{Color.RED}FAILED{Color.END}"
+    type_err = f"{failed}: Argument value for parameter '{name}' "
+    type_err += f"has wrong type. Expected type: '{ann}' "
+    type_err += f"Actual type: '{rep}'"
+    if halt:
+        raise TypeError(type_err)
+    print(type_err)
+
+
+def fail_uninitialized(name: str, ann: SubscriptableMeta, halt: bool) -> None:
+    """ Print/raise typecheck fail error for uninitialized placeholder. """
+    failed = f"{Color.RED}FAILED{Color.END}"
+    type_err = f"{failed}: Uninitialized placeholder '{name}'"
+    if halt:
+        raise TypeError(type_err)
+    print(type_err)
 
 
 def typechecked(decorated):  # type: ignore[no-untyped-def]
@@ -105,6 +194,8 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
     _wrapper : ``Callable[[Any], Any]``.
         The decorated version of ``decorated``.
     """
+    if "ASTA_TYPECHECK" not in os.environ or os.environ["ASTA_TYPECHECK"] == "0":
+        return decorated
 
     def _wrapper(*args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         """ Decorated/typechecked function. """
@@ -154,45 +245,62 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
             num_annot_err += f"'({num_args})'. There may be a type annotation missing."
             raise TypeError(num_annot_err)
 
+        vdims: Dict[VariablePlaceholder, int] = {}
+
+        halt = os.environ["ASTA_TYPECHECK"] == "2"
+
         # Check positional arguments.
         for i, arg in enumerate(checkable_args):
             name = list(annotations.keys())[i]
             annotation = annotations[name]
+
+            # Check if the annotation is an asta class.
             if isinstance(annotation, SubscriptableMeta):
-                annotation = refresh(annotation)
+                unrefreshed = annotation
+                annotation, initialized = refresh(annotation, vdims, halt)
+                if not initialized:
+                    continue
+
+                # Check if the argument matches the annotation.
                 rep = type_representation(arg)
                 if not isinstance(arg, annotation):
-                    type_err = f"Argument value for parameter '{name}' "
-                    type_err += f"has wrong type. Expected type: '{annotation}' "
-                    type_err += f"Actual type: '{rep}'"
-                    raise TypeError(type_err)
-                pass_argument(name, annotation, rep)
+                    fail_argument(name, annotation, rep, halt)
+                else:
+                    pass_argument(name, annotation, rep)
+
+                    # Update variable dimension map.
+                    vdims = update_vplaceholders(vdims, annotation, unrefreshed, arg)
 
         # Check keyword arguments.
         for name, kwarg in filled_kwargs.items():
             annotation = annotations[name]
             if isinstance(annotation, SubscriptableMeta):
-                annotation = refresh(annotation)
+                unrefreshed = annotation
+                annotation, initialized = refresh(annotation, vdims, halt)
+                if not initialized:
+                    continue
                 rep = type_representation(kwarg)
                 if not isinstance(kwarg, annotation):
-                    type_err = f"Argument value for parameter '{name}' "
-                    type_err += f"has wrong type. Expected type: '{annotation}' "
-                    type_err += f"Actual type: '{rep}'"
-                    raise TypeError(type_err)
-                pass_argument(name, annotation, rep)
+                    fail_argument(name, annotation, rep, halt)
+                else:
+                    pass_argument(name, annotation, rep)
+                    vdims = update_vplaceholders(vdims, annotation, unrefreshed, kwarg)
 
         # Check return.
         ret = decorated(*args, **kwargs)
         return_annotation = annotations["return"]
         if isinstance(return_annotation, SubscriptableMeta):
-            return_annotation = refresh(return_annotation)
-            rep = type_representation(ret)
-            if not isinstance(ret, return_annotation):
-                type_err = f"Return value has wrong type. "
-                type_err += f"Expected type: '{return_annotation}' "
-                type_err += f"Actual type: '{rep}'"
-                raise TypeError(type_err)
-            pass_return(0, return_annotation, rep)
+            unrefreshed = return_annotation
+            return_annotation, initialized = refresh(return_annotation, vdims, halt)
+            if initialized:
+                rep = type_representation(ret)
+                if not isinstance(ret, return_annotation):
+                    fail_return(0, return_annotation, rep, halt)
+                else:
+                    pass_return(0, return_annotation, rep)
+                    vdims = update_vplaceholders(
+                        vdims, return_annotation, unrefreshed, ret
+                    )
 
         # TODO: Treat tuples, lists, sequences recursively.
 
@@ -201,6 +309,4 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
     _wrapper.__module__ = decorated.__module__
     _wrapper.__name__ = decorated.__name__
 
-    if "ASTA_TYPECHECK" in os.environ and os.environ["ASTA_TYPECHECK"] == "1":
-        return _wrapper
-    return decorated
+    return _wrapper
