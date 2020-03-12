@@ -75,6 +75,18 @@ def type_representation(arg: Any) -> str:
     return rep
 
 
+def pass_return(i: int, ann: SubscriptableMeta, rep: str) -> None:
+    """ Print typecheck pass notification for return values. """
+    passed = f"{Color.GREEN}PASSED{Color.END}"
+    print(f"{passed}: Return {i} matched return type '{ann}' with actual type: '{rep}'")
+
+
+def pass_argument(name: str, ann: SubscriptableMeta, rep: str) -> None:
+    """ Print typecheck pass notification for return values. """
+    passed = f"{Color.GREEN}PASSED{Color.END}"
+    print(f"{passed}: Arg '{name}' matched parameter '{ann}' with actual type: '{rep}'")
+
+
 def typechecked(decorated):  # type: ignore[no-untyped-def]
     """
     Typecheck a function annotated with ``asta`` type objects. This decorator
@@ -96,8 +108,8 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
 
     def _wrapper(*args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         """ Decorated/typechecked function. """
-        annotations = decorated.__annotations__
 
+        # Print the typecheck header.
         fn_rep = f"{Color.BOLD}{decorated.__module__}.{decorated.__name__}(){Color.END}"
         header = f"<asta::@typechecked::{fn_rep}>"
         min_pad_size = 10
@@ -109,13 +121,23 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         print(f"{left_padding}{header}{right_padding}")
 
         # Get number of non-return annotations.
+        annotations = decorated.__annotations__
         num_annots = len(annotations)
         num_non_return_annots = num_annots
         if "return" in annotations:
             num_non_return_annots -= 1
 
+        # Get the parameter list from the function signature.
         sig = inspect.signature(decorated)
         paramlist = list(sig.parameters)
+
+        # Get a list of kwargs with defaults filled-in.
+        defaults: Dict[str, Any] = {}
+        for k, v in sig.parameters.items():
+            if v.default is not inspect.Parameter.empty:
+                defaults[k] = v.default
+        filled_kwargs: Dict[str, Any] = defaults.copy()
+        filled_kwargs.update(kwargs)
 
         # Remove unannotated instance/class/metaclass reference.
         checkable_args = args
@@ -123,7 +145,8 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         if len(sig.parameters) == num_non_return_annots + 1 and paramlist[0] in refs:
             checkable_args = checkable_args[1:]
 
-        num_args = len(checkable_args) + len(kwargs)
+        # Check for mismatch between lengths of arguments/annotations.
+        num_args = len(checkable_args) + len(filled_kwargs)
         if num_non_return_annots != num_args:
             num_annot_err = f"Mismatch between number of annotated "
             num_annot_err += f"non-(self / cls / mcs) parameters "
@@ -133,7 +156,6 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
 
         # Check positional arguments.
         for i, arg in enumerate(checkable_args):
-
             name = list(annotations.keys())[i]
             annotation = annotations[name]
             if isinstance(annotation, SubscriptableMeta):
@@ -144,12 +166,10 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
                     type_err += f"has wrong type. Expected type: '{annotation}' "
                     type_err += f"Actual type: '{rep}'"
                     raise TypeError(type_err)
-                print(
-                    f"{Color.GREEN}PASSED{Color.END}: Arg '{name}' matched parameter '{annotation}' with actual type: '{rep}'"
-                )
+                pass_argument(name, annotation, rep)
 
         # Check keyword arguments.
-        for name, kwarg in kwargs.items():
+        for name, kwarg in filled_kwargs.items():
             annotation = annotations[name]
             if isinstance(annotation, SubscriptableMeta):
                 annotation = refresh(annotation)
@@ -159,9 +179,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
                     type_err += f"has wrong type. Expected type: '{annotation}' "
                     type_err += f"Actual type: '{rep}'"
                     raise TypeError(type_err)
-                print(
-                    f"{Color.GREEN}PASSED{Color.END}: Arg '{name}' matched parameter '{annotation}' with actual type: '{rep}'"
-                )
+                pass_argument(name, annotation, rep)
 
         # Check return.
         ret = decorated(*args, **kwargs)
@@ -174,9 +192,9 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
                 type_err += f"Expected type: '{return_annotation}' "
                 type_err += f"Actual type: '{rep}'"
                 raise TypeError(type_err)
-            print(
-                f"{Color.GREEN}PASSED{Color.END}: Return matched return type '{return_annotation}' with actual type: '{rep}'"
-            )
+            pass_return(0, return_annotation, rep)
+
+        # TODO: Treat tuples, lists, sequences recursively.
 
         return ret
 
