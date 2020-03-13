@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-""" This module contains meta functionality for the ``Array`` type. """
+""" This module contains a general subscript parser for subscriptable types. """
 from typing import Optional, Tuple, Union
 
 from asta.utils import is_subtuple
@@ -61,11 +61,11 @@ def parse_subscript(
                     raise TypeError(err)
             shape = cls.get_shape(item)
     else:
-        empty_err = "Argument to 'Array[]' cannot be empty tuple. "
-        empty_err += "Use 'Array[None]' to indicate a scalar."
+        empty_err = "Argument to '{cls.NAME}[]' cannot be empty tuple. "
+        empty_err += "Use '{cls.NAME}[None]' to indicate a scalar."
         raise TypeError(empty_err)
 
-    if isinstance(shape, tuple) and is_subtuple((..., ...), shape)[0]:
+    if isinstance(shape, tuple) and is_subtuple((..., ...), shape, {})[0]:
         raise TypeError("Invalid shape: repeated '...'")
 
     return dtype, shape, kind

@@ -7,8 +7,9 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 import torch
 import numpy as np
 
-from asta.utils import is_subtuple, get_shape_rep, shapecheck
+from asta.utils import get_shape_rep, shapecheck
 from asta.scalar import Scalar
+from asta.parser import parse_subscript
 from asta.classes import SubscriptableMeta, GenericMeta
 from asta.constants import (
     EllipsisType,
@@ -83,7 +84,8 @@ class _TensorMeta(SubscriptableMeta):
 class _Tensor(metaclass=_TensorMeta):
     """ This class exists to keep the Tensor class as clean as possible. """
 
-    _DIM_TYPES: List[type] = TORCH_DIM_TYPES
+    NAME: str = "Tensor"
+    DIM_TYPES: List[type] = TORCH_DIM_TYPES
     _TORCH_DTYPE_MAP: Dict[type, torch.dtype] = TORCH_DTYPE_MAP
 
     dtype: Optional[torch.dtype] = None
@@ -93,7 +95,7 @@ class _Tensor(metaclass=_TensorMeta):
         raise TypeError("Cannot instantiate abstract class 'Tensor'.")
 
     @classmethod
-    def get_dtype(cls, item: Any) -> Optional[torch.dtype]:
+    def get_dtype(cls, item: Any) -> Tuple[Optional[torch.dtype], ...]:
         """ Computes dtype. """
         dtype = None
 
@@ -118,7 +120,7 @@ class _Tensor(metaclass=_TensorMeta):
                 raise TypeError(invalid_type_err)
             dtype = cls._TORCH_DTYPE_MAP[generic_type]
 
-        return dtype
+        return dtype, None
 
     @staticmethod
     def get_shape(item: Tuple) -> Optional[Tuple]:
@@ -143,54 +145,9 @@ class _Tensor(metaclass=_TensorMeta):
 
     @classmethod
     def _after_subscription(
-        cls, item: Union[type, Optional[Union[int, EllipsisType]]],  # type: ignore
+        cls, item: Union[type, Optional[Union[int, EllipsisType]]]  # type: ignore
     ) -> None:
         """ Set class attributes based on the passed dtype/dim data. """
-
-        err = f"Invalid dimension '{item}' of type '{type(item)}'. "
-        err += f"Valid dimension types: {cls._DIM_TYPES}"
-
-        # TODO: This is not sustainable because we need to check for tf as well.
-        if isinstance(item, (type, np.dtype, torch.dtype)) and item != Scalar:
-            cls.dtype = _Tensor.get_dtype(item)
-            cls.shape = None
-
-        # Case where dtype is Any and shape is scalar.
-        elif item in (Scalar, ()):
-            cls.shape = ()
-
-        # Case where dtype is not passed in, and there's one input.
-        # i.e. ``Tensor[1]`` or ``Tensor[None]`` or ``Tensor[...]``.
-        elif not isinstance(item, tuple):
-            if type(item) not in cls._DIM_TYPES:
-                raise TypeError(err)
-            cls.shape = (item,)
-
-        # Case where ``item`` is a nonempty tuple.
-        elif item:
-
-            # Case where generic type is specified.
-            if isinstance(item[0], (type, torch.dtype)) and item[0] != Scalar:
-                cls.dtype = _Tensor.get_dtype(item[0])
-                for i, dim in enumerate(item[1:]):
-                    if type(dim) not in cls._DIM_TYPES:
-                        err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
-                        err += f"Valid dimension types: {cls._DIM_TYPES}"
-                        raise TypeError(err)
-                cls.shape = _Tensor.get_shape(item[1:])
-
-            # Case where generic type is unspecified.
-            else:
-                for i, dim in enumerate(item):
-                    if type(dim) not in cls._DIM_TYPES:
-                        err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
-                        err += f"Valid dimension types: {cls._DIM_TYPES}"
-                        raise TypeError(err)
-                cls.shape = _Tensor.get_shape(item)
-        else:
-            empty_err = "Argument to 'Tensor[]' cannot be empty tuple. "
-            empty_err += "Use 'Tensor[None]' to indicate a scalar."
-            raise TypeError(empty_err)
-
-        if cls.shape is not None and is_subtuple((Ellipsis, Ellipsis), cls.shape)[0]:
-            raise TypeError("Invalid shape: repeated '...'")
+        dtype, shape, _ = parse_subscript(cls, item, torch.dtype)
+        cls.dtype = dtype
+        cls.shape = shape

@@ -10,21 +10,13 @@ class VariablePlaceholder:
     """ Placeholder for variable annotation dimensions. """
 
     def __init__(self, name: str) -> None:
+        assert isinstance(name, str)
         self.name = name
         self.unpacked = False
 
     def __repr__(self) -> str:
         """ String representation of placeholder. """
-        return f"<Placeholder name: '{self.name}'>"
-
-    def __iter__(self) -> object:
-        """ Make sure instances can be unpacked. """
-        self.unpacked = True
-        yield self
-
-    def __next__(self) -> None:
-        """ Instances are empty iterators. """
-        raise StopIteration
+        return str(self.name)
 
 
 def __getattr__(name: str) -> Any:
