@@ -5,7 +5,7 @@ import random
 import functools
 from typing import List, Dict, Tuple, Union, Any
 
-from asta.vdims import VariablePlaceholder
+from sympy.core.expr import Expr
 from asta.constants import EllipsisType, torch, _TORCH_IMPORTED
 
 # pylint: disable=too-many-boolean-expressions
@@ -19,7 +19,7 @@ def shapecheck(
     match = True
     assert isinstance(inst_shape, tuple)
 
-    vdims: Dict[VariablePlaceholder, int] = {}
+    vdims: Dict[Expr, int] = {}
 
     # The portions of ``inst_shape`` which correspond to each ``cls_shape`` elem.
     shape_pieces: List[Tuple[int, ...]] = []
@@ -142,8 +142,8 @@ def shapecheck(
 def is_subtuple(
     sub: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
     tup: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
-    vdims: Dict[VariablePlaceholder, int],
-) -> Tuple[bool, int, Dict[VariablePlaceholder, int]]:
+    vdims: Dict[Expr, int],
+) -> Tuple[bool, int, Dict[Expr, int]]:
     """ Check for tuple inclusion, return index of first one. """
     assert isinstance(sub, tuple)
     assert isinstance(tup, tuple)
@@ -184,8 +184,8 @@ def split(
 def check_equal(
     shape_1: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
     shape_2: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
-    vdims: Dict[VariablePlaceholder, int],
-) -> Tuple[bool, Dict[VariablePlaceholder, int]]:
+    vdims: Dict[Expr, int],
+) -> Tuple[bool, Dict[Expr, int]]:
     """
     Determines if two shape tuples are equal, allowing wildcards (``-1``),
     which can take the place of an positive integer, and vdims, which can take
@@ -204,21 +204,21 @@ def check_equal(
         ):
             continue
 
-        if isinstance(x, VariablePlaceholder) and isinstance(y, int):
+        if isinstance(x, Expr) and isinstance(y, int):
             if x not in vdims:
                 vdims[x] = y
             elif vdims[x] != y:
                 return False, vdims
             continue
 
-        if isinstance(y, VariablePlaceholder) and isinstance(x, int):
+        if isinstance(y, Expr) and isinstance(x, int):
             if y not in vdims:
                 vdims[y] = x
             elif vdims[y] != x:
                 return False, vdims
             continue
 
-        if isinstance(x, VariablePlaceholder) and isinstance(y, VariablePlaceholder):
+        if isinstance(x, Expr) and isinstance(y, Expr):
             if x in vdims and y in vdims and vdims[x] != vdims[y]:
                 return False, vdims
             if x in vdims and y not in vdims:

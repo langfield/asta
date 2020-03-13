@@ -3,6 +3,8 @@
 """ This module contains a general subscript parser for subscriptable types. """
 from typing import Optional, Tuple, Union
 
+from sympy.core.expr import Expr
+
 from asta.utils import is_subtuple
 from asta.scalar import Scalar
 from asta.classes import SubscriptableMeta
@@ -46,7 +48,11 @@ def parse_subscript(
         if isinstance(item[0], (type, dtype_metaclass)) and item[0] != Scalar:
             dtype, kind = cls.get_dtype(item[0])
             for dim in item[1:]:
-                if type(dim) not in cls.DIM_TYPES:
+
+                # Treat sympy expressions specially.
+                if isinstance(dim, Expr):
+                    pass
+                elif type(dim) not in cls.DIM_TYPES:
                     err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
                     err += f"Valid dimension types: {cls.DIM_TYPES}"
                     raise TypeError(err)

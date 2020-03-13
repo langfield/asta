@@ -2,26 +2,12 @@
 # -*- coding: utf-8 -*-
 """ Implements variable dimension sizes for annotations. """
 from typing import Any
-
-# pylint: disable=redefined-outer-name, too-few-public-methods, no-self-use
-
-
-class VariablePlaceholder:
-    """ Placeholder for variable annotation dimensions. """
-
-    def __init__(self, name: str) -> None:
-        assert isinstance(name, str)
-        self.name = name
-        self.unpacked = False
-
-    def __repr__(self) -> str:
-        """ String representation of placeholder. """
-        return str(self.name)
+from sympy import symbols
 
 
 def __getattr__(name: str) -> Any:
     """ Yields the dims. """
-    return VariablePlaceholder(name)
+    return symbols(name)
 
 
 def __setattr__(name: str, value: Any) -> None:

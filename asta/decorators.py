@@ -8,10 +8,10 @@ import inspect
 from typing import Any, Tuple, Dict, Set
 
 import numpy as np
+from sympy.core.expr import Expr
 
 import asta.dims
 from asta.dims import Placeholder
-from asta.vdims import VariablePlaceholder
 from asta.utils import shapecheck
 from asta.array import Array
 from asta._array import _ArrayMeta
@@ -29,7 +29,7 @@ if _TORCH_IMPORTED:
 
 
 def refresh(
-    annotation: SubscriptableMeta, vdims: Dict[VariablePlaceholder, int], halt: bool,
+    annotation: SubscriptableMeta, vdims: Dict[Expr, int], halt: bool,
 ) -> Tuple[SubscriptableMeta, bool]:
     """ Load an asta type annotation containing placeholders. """
     dtype = annotation.dtype
@@ -39,9 +39,9 @@ def refresh(
     uninitialized_placeholder_names: Set[str] = set()
 
     if annotation.shape is not None:
-        for dim in annotation.shape:
-            if isinstance(dim, Placeholder):
-                placeholder = dim
+        for item in annotation.shape:
+            if isinstance(item, Placeholder):
+                placeholder = item
                 dimvar = getattr(asta.dims, placeholder.name)
 
                 # Catch uninitialized placeholders.
@@ -58,20 +58,20 @@ def refresh(
                         dimvars.append(elem)
                 else:
                     dimvars.append(dimvar)
-            elif isinstance(dim, VariablePlaceholder):
-                # TODO: Fix naming.
-                vdim = dim
+            elif isinstance(item, Expr):
+                vdim = item
 
+                # TODO: Maybe don't do this to make display consistent?
                 # Add variable dimension if it has already been set.
                 if vdim in vdims:
                     dimvar = vdims[vdim]
                     dimvars.append(dimvar)
 
-                # Otherwise, add a wildcard.
+                # Otherwise, add the expression itself.
                 else:
                     dimvars.append(vdim)
             else:
-                dimvars.append(dim)
+                dimvars.append(item)
         assert len(dimvars) == len(shape)
         shape = tuple(dimvars)
 
@@ -88,14 +88,14 @@ def refresh(
 
 
 def update_vplaceholders(
-    vdims: Dict[VariablePlaceholder, int],
+    vdims: Dict[Expr, int],
     annotation: SubscriptableMeta,
     unrefreshed: SubscriptableMeta,
     arg: Any,
-) -> Dict[VariablePlaceholder, int]:
+) -> Dict[Expr, int]:
     """ Returns an updated copy of vdims with actual values inserted. """
     # Copy the input vdims.
-    new_vdims: Dict[VariablePlaceholder, int] = vdims.copy()
+    new_vdims: Dict[Expr, int] = vdims.copy()
 
     if annotation.shape is not None:
         assert unrefreshed.shape is not None
@@ -114,7 +114,7 @@ def update_vplaceholders(
         for dim, piece in zip(unrefreshed.shape, shape_pieces):
 
             # If a class shape element is a variable placeholder.
-            if isinstance(dim, VariablePlaceholder):
+            if isinstance(dim, Expr):
                 vplaceholder = dim
                 assert len(piece) == 1
                 literal: int = piece[0]
@@ -255,7 +255,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
             num_annot_err += f"'({num_args})'. There may be a type annotation missing."
             raise TypeError(num_annot_err)
 
-        vdims: Dict[VariablePlaceholder, int] = {}
+        vdims: Dict[Expr, int] = {}
 
         halt = os.environ["ASTA_TYPECHECK"] == "2"
 

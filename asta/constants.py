@@ -2,8 +2,8 @@
 import datetime
 from typing import Dict, List, Any
 import numpy as np
+from sympy.core.expr import Expr
 from asta.dims import Placeholder
-from asta.vdims import VariablePlaceholder
 
 _TORCH_IMPORTED = False
 try:
@@ -104,26 +104,17 @@ GENERIC_TYPES: List[type] = [
 NoneType = type(None)
 EllipsisType = type(Ellipsis)
 
-# TODO: Fix code duplication below. Add COMMON DIM TYPES.
-NUMPY_DIM_TYPES: List[type] = [
+CORE_DIM_TYPES: List[type] = [
     int,
     ScalarMeta,
     EllipsisType,
     NoneType,  # type: ignore[misc]
     tuple,
     Placeholder,
-    VariablePlaceholder,
+    Expr,
 ]
-TORCH_DIM_TYPES: List[type] = [
-    int,
-    ScalarMeta,
-    EllipsisType,
-    NoneType,  # type: ignore[misc]
-    tuple,
-    torch.Size,
-    Placeholder,
-    VariablePlaceholder,
-]
+NUMPY_DIM_TYPES: List[type] = CORE_DIM_TYPES
+TORCH_DIM_TYPES: List[type] = CORE_DIM_TYPES + [torch.Size]
 NP_UNSIZED_TYPE_KINDS: Dict[type, str] = {bytes: "S", str: "U", object: "O"}
 NP_GENERIC_TYPES: List[type] = [
     bool,

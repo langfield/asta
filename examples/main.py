@@ -32,6 +32,14 @@ def main() -> None:
     y = torch.ones((4, 4, 4))
     first_argument(x, y)
 
+    x = torch.ones((5, 5, 5))
+    y = torch.ones((5, 5, 4))
+    first_argument(x, y)
+
+    x = torch.ones((5, 5, 4))
+    y = torch.ones((5, 5, 5))
+    first_argument(x, y)
+
 
 if __name__ == "__main__":
     main()
