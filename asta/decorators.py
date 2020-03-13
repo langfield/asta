@@ -20,6 +20,7 @@ from asta.constants import torch, Color, _TORCH_IMPORTED
 
 
 METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
+
 if _TORCH_IMPORTED:
     from asta.tensor import Tensor
     from asta._tensor import _TensorMeta
@@ -58,6 +59,7 @@ def refresh(
                 else:
                     dimvars.append(dimvar)
             elif isinstance(dim, VariablePlaceholder):
+                # TODO: Fix naming.
                 vdim = dim
 
                 # Add variable dimension if it has already been set.
@@ -67,7 +69,7 @@ def refresh(
 
                 # Otherwise, add a wildcard.
                 else:
-                    dimvars.append(-1)
+                    dimvars.append(vdim)
             else:
                 dimvars.append(dim)
         assert len(dimvars) == len(shape)
@@ -93,7 +95,7 @@ def update_vplaceholders(
 ) -> Dict[VariablePlaceholder, int]:
     """ Returns an updated copy of vdims with actual values inserted. """
     # Copy the input vdims.
-    updated_vdims: Dict[VariablePlaceholder, int] = vdims.copy()
+    new_vdims: Dict[VariablePlaceholder, int] = vdims.copy()
 
     if annotation.shape is not None:
         assert unrefreshed.shape is not None
@@ -108,14 +110,22 @@ def update_vplaceholders(
         assert match
         assert len(annotation.shape) == len(unrefreshed.shape) == len(shape_pieces)
 
+        # Iterate over class shape and corresponding instance shape pieces.
         for dim, piece in zip(unrefreshed.shape, shape_pieces):
-            if isinstance(dim, VariablePlaceholder):
-                vdim = dim
-                assert len(piece) == 1
-                if vdim not in vdims:
-                    updated_vdims[vdim] = piece[0]
 
-    return updated_vdims
+            # If a class shape element is a variable placeholder.
+            if isinstance(dim, VariablePlaceholder):
+                vplaceholder = dim
+                assert len(piece) == 1
+                literal: int = piece[0]
+
+                # Attempt to update the vdims map.
+                if vplaceholder not in new_vdims:
+                    new_vdims[vplaceholder] = literal
+                elif vplaceholder in new_vdims and new_vdims[vplaceholder] != literal:
+                    raise TypeError("This should never happen.")
+
+    return new_vdims
 
 
 def type_representation(arg: Any) -> str:
