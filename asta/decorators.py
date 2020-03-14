@@ -7,7 +7,6 @@ import os
 import inspect
 from typing import Any, Tuple, Dict, Set
 
-import numpy as np
 from sympy.core.expr import Expr
 
 import asta.dims
@@ -16,7 +15,16 @@ from asta.utils import shapecheck
 from asta.array import Array
 from asta._array import _ArrayMeta
 from asta.classes import SubscriptableMeta
-from asta.constants import torch, Color, _TORCH_IMPORTED
+from asta.constants import torch, _TORCH_IMPORTED
+from asta.display import (
+    type_representation,
+    pass_argument,
+    pass_return,
+    fail_argument,
+    fail_return,
+    fail_uninitialized,
+    get_header,
+)
 
 
 METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
@@ -40,6 +48,8 @@ def refresh(
 
     if annotation.shape is not None:
         for item in annotation.shape:
+
+            # Handle fixed placeholders.
             if isinstance(item, Placeholder):
                 placeholder = item
                 dimvar = getattr(asta.dims, placeholder.name)
@@ -58,11 +68,13 @@ def refresh(
                         dimvars.append(elem)
                 else:
                     dimvars.append(dimvar)
+
+            # Handle sympy expressions.
             elif isinstance(item, Expr):
                 vdim = item
 
                 # TODO: Maybe don't do this to make display consistent?
-                # Add variable dimension if it has already been set.
+                # Add the value of the expression if it has already been set.
                 if vdim in vdims:
                     dimvar = vdims[vdim]
                     dimvars.append(dimvar)
@@ -100,7 +112,7 @@ def update_vplaceholders(
     if annotation.shape is not None:
         assert unrefreshed.shape is not None
 
-        # Handle case where type(shape) != tuple.
+        # Handle case where type(shape) != tuple, e.g. ``torch.Size``.
         arg_shape = tuple(arg.shape)
         assert not isinstance(arg_shape, torch.Size)
 
@@ -111,79 +123,117 @@ def update_vplaceholders(
         assert len(annotation.shape) == len(unrefreshed.shape) == len(shape_pieces)
 
         # Iterate over class shape and corresponding instance shape pieces.
-        for dim, piece in zip(unrefreshed.shape, shape_pieces):
+        for item, piece in zip(unrefreshed.shape, shape_pieces):
 
-            # If a class shape element is a variable placeholder.
-            if isinstance(dim, Expr):
-                vplaceholder = dim
+            # If a class shape element is a sympy expression.
+            if isinstance(item, Expr):
+                vdim = item
                 assert len(piece) == 1
                 literal: int = piece[0]
 
                 # Attempt to update the vdims map.
-                if vplaceholder not in new_vdims:
-                    new_vdims[vplaceholder] = literal
-                elif vplaceholder in new_vdims and new_vdims[vplaceholder] != literal:
+                if vdim not in new_vdims:
+                    new_vdims[vdim] = literal
+                elif vdim in new_vdims and new_vdims[vdim] != literal:
                     raise TypeError("This should never happen.")
 
     return new_vdims
 
 
-def type_representation(arg: Any) -> str:
-    """ Get a string representation of an argument including dtype and shape. """
-    rep = repr(type(arg))
-    if hasattr(arg, "shape"):
-        shape = arg.shape
-    if hasattr(arg, "dtype"):
-        dtype = arg.dtype
-    if isinstance(arg, np.ndarray):
-        astatype = Array[dtype, shape]  # type: ignore[valid-type, type-arg]
-        rep = repr(astatype).replace("asta", "numpy")
-    elif isinstance(arg, torch.Tensor):
-        astatype = Tensor[dtype, shape]  # type: ignore
-        rep = repr(astatype).replace("asta", "torch")
-    return rep
+def check_annotation(
+    val: Any, name: str, annotations: Dict[str, Any], vdims: Dict[Expr, int]
+) -> Dict[Expr, int]:
+    """ Check if ``val`` is of type ``annotation`` for asta types only. """
+    annotation = annotations[name]
+    halt = os.environ["ASTA_TYPECHECK"] == "2"
+
+    # TODO: The solution to the set of equations for each individual annotation
+    # should be unique. If there is no solution, print/raise an error. If there
+    # are multiple solutions, raise an error; someone is trying to do inference
+    # on way too many variables.
+
+    # Thus there should be no need to iterate over the function signature more
+    # than once. A single isinstance check should always be sufficient to
+    # determine if there is a solution. However, that does not mean that single
+    # isinstance checks are self-contained. In addition to specifying a unique
+    # solution, all the annotations' solutions must agree for a given function
+    # signature.
+
+    # Determine which display functions to use.
+    if name == "return":
+        fail_fn = fail_return
+        pass_fn = pass_return
+    else:
+        fail_fn = fail_argument
+        pass_fn = pass_argument
+
+    # Only check if the annotation is an asta subscriptable class.
+    if isinstance(annotation, SubscriptableMeta):
+        unrefreshed = annotation
+        annotation, initialized = refresh(annotation, vdims, halt)
+        if not initialized:
+            return vdims
+
+        # Check if the literal ``val`` matches the annotation.
+        rep: str = type_representation(val)
+        # HARDCODE
+        identifier = "0" if name == "return" else name
+
+        # If the isinstance check fails, print/raise an error.
+        if not isinstance(val, annotation):
+            fail_fn(identifier, annotation, rep, halt)
+
+        # Otherwise, print a pass.
+        else:
+            pass_fn(identifier, annotation, rep)
+
+            # Update variable dimension map.
+            vdims = update_vplaceholders(vdims, annotation, unrefreshed, val)
+
+    return vdims
 
 
-def pass_return(i: int, ann: SubscriptableMeta, rep: str) -> None:
-    """ Print typecheck pass notification for return values. """
-    passed = f"{Color.GREEN}PASSED{Color.END}"
-    print(f"{passed}: Return {i} matched return type '{ann}' with actual type: '{rep}'")
+def validate_annotations(  # type: ignore[no-untyped-def]
+    decorated, annotations: Dict[str, Any], args: Tuple[Any], kwargs: Dict[str, Any],
+) -> Tuple[Tuple[Any], Dict[str, Any]]:
+    """
+    Make sure there is an annotation for each parameter, return arguments in
+    args other than class references (self, cls, mcs), and keyword arguments in
+    kwargs with defaults filled in.
+    """
+    num_annots = len(annotations)
+    num_non_return_annots = num_annots
+    if "return" in annotations:
+        num_non_return_annots -= 1
 
+    # Get the parameter list from the function signature.
+    sig = inspect.signature(decorated)
+    paramlist = list(sig.parameters)
 
-def fail_return(i: int, ann: SubscriptableMeta, rep: str, halt: bool) -> None:
-    """ Print/raise typecheck fail error for return values. """
-    failed = f"{Color.RED}FAILED{Color.END}"
-    type_err = f"{failed}: Return {i} has wrong type. Expected type: "
-    type_err += f"'{ann}' Actual type: '{rep}'"
-    if halt:
-        raise TypeError(type_err)
-    print(type_err)
+    # Get a list of kwargs with defaults filled-in.
+    defaults: Dict[str, Any] = {}
+    for k, v in sig.parameters.items():
+        if v.default is not inspect.Parameter.empty:
+            defaults[k] = v.default
+    defaulted_kwargs: Dict[str, Any] = defaults.copy()
+    defaulted_kwargs.update(kwargs)
 
+    # Remove unannotated instance/class/metaclass reference.
+    checkable_args = args
+    refs = ("self", "cls", "mcs")
+    if len(sig.parameters) == num_non_return_annots + 1 and paramlist[0] in refs:
+        checkable_args = checkable_args[1:]  # type: ignore[assignment]
 
-def pass_argument(name: str, ann: SubscriptableMeta, rep: str) -> None:
-    """ Print typecheck pass notification for arguments. """
-    passed = f"{Color.GREEN}PASSED{Color.END}"
-    print(f"{passed}: Arg '{name}' matched parameter '{ann}' with actual type: '{rep}'")
+    # Check for mismatch between lengths of arguments/annotations.
+    num_args = len(checkable_args) + len(defaulted_kwargs)
+    if num_non_return_annots != num_args:
+        num_annot_err = f"Mismatch between number of annotated "
+        num_annot_err += f"non-(self / cls / mcs) parameters "
+        num_annot_err += f"'({num_non_return_annots})' and number of arguments "
+        num_annot_err += f"'({num_args})'. There may be a type annotation missing."
+        raise TypeError(num_annot_err)
 
-
-def fail_argument(name: str, ann: SubscriptableMeta, rep: str, halt: bool) -> None:
-    """ Print/raise typecheck fail error for arguments. """
-    failed = f"{Color.RED}FAILED{Color.END}"
-    type_err = f"{failed}: Argument value for parameter '{name}' "
-    type_err += f"has wrong type. Expected type: '{ann}' "
-    type_err += f"Actual type: '{rep}'"
-    if halt:
-        raise TypeError(type_err)
-    print(type_err)
-
-
-def fail_uninitialized(name: str, ann: SubscriptableMeta, halt: bool) -> None:
-    """ Print/raise typecheck fail error for uninitialized placeholder. """
-    failed = f"{Color.RED}FAILED{Color.END}"
-    type_err = f"{failed}: Uninitialized placeholder '{name}'"
-    if halt:
-        raise TypeError(type_err)
-    print(type_err)
+    return checkable_args, defaulted_kwargs
 
 
 def typechecked(decorated):  # type: ignore[no-untyped-def]
@@ -210,109 +260,35 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
     def _wrapper(*args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         """ Decorated/typechecked function. """
 
-        # Print the typecheck header.
-        fn_rep = f"{Color.BOLD}{decorated.__module__}.{decorated.__name__}(){Color.END}"
-        header = f"<asta::@typechecked::{fn_rep}>"
-        min_pad_size = 10
-        pad_size = 80 - len(header)
-        side_size = max(pad_size // 2, min_pad_size)
-        pad_parity = pad_size % 2 if side_size > 10 else 0
-        left_padding = "=" * side_size
-        right_padding = "=" * (side_size + pad_parity)
-        print(f"{left_padding}{header}{right_padding}")
-
-        # Get number of non-return annotations.
-        annotations = decorated.__annotations__
-        num_annots = len(annotations)
-        num_non_return_annots = num_annots
-        if "return" in annotations:
-            num_non_return_annots -= 1
-
-        # Get the parameter list from the function signature.
-        sig = inspect.signature(decorated)
-        paramlist = list(sig.parameters)
-
-        # Get a list of kwargs with defaults filled-in.
-        defaults: Dict[str, Any] = {}
-        for k, v in sig.parameters.items():
-            if v.default is not inspect.Parameter.empty:
-                defaults[k] = v.default
-        filled_kwargs: Dict[str, Any] = defaults.copy()
-        filled_kwargs.update(kwargs)
-
-        # Remove unannotated instance/class/metaclass reference.
-        checkable_args = args
-        refs = ("self", "cls", "mcs")
-        if len(sig.parameters) == num_non_return_annots + 1 and paramlist[0] in refs:
-            checkable_args = checkable_args[1:]
-
-        # Check for mismatch between lengths of arguments/annotations.
-        num_args = len(checkable_args) + len(filled_kwargs)
-        if num_non_return_annots != num_args:
-            num_annot_err = f"Mismatch between number of annotated "
-            num_annot_err += f"non-(self / cls / mcs) parameters "
-            num_annot_err += f"'({num_non_return_annots})' and number of arguments "
-            num_annot_err += f"'({num_args})'. There may be a type annotation missing."
-            raise TypeError(num_annot_err)
+        # Print header for ``decorated``.
+        header: str = get_header(decorated)
+        print(header)
 
         vdims: Dict[Expr, int] = {}
+        annotations: Dict[str, Any] = decorated.__annotations__
+        checkable_args, defaulted_kwargs = validate_annotations(
+            decorated,
+            annotations,
+            args,  # type: ignore
+            kwargs,
+        )
 
-        halt = os.environ["ASTA_TYPECHECK"] == "2"
+        # Consider making one monolithic argument map of names -> args,
+        # incorporating args, kwargs, and return, and iterating over only that.
 
         # Check positional arguments.
         for i, arg in enumerate(checkable_args):
             name = list(annotations.keys())[i]
-            annotation = annotations[name]
-
-            # Check if the annotation is an asta class.
-            if isinstance(annotation, SubscriptableMeta):
-                unrefreshed = annotation
-                annotation, initialized = refresh(annotation, vdims, halt)
-                if not initialized:
-                    continue
-
-                # Check if the argument matches the annotation.
-                rep = type_representation(arg)
-                if not isinstance(arg, annotation):
-                    fail_argument(name, annotation, rep, halt)
-                else:
-                    pass_argument(name, annotation, rep)
-
-                    # Update variable dimension map.
-                    vdims = update_vplaceholders(vdims, annotation, unrefreshed, arg)
+            vdims = check_annotation(arg, name, annotations, vdims)
 
         # Check keyword arguments.
-        for name, kwarg in filled_kwargs.items():
-            annotation = annotations[name]
-            if isinstance(annotation, SubscriptableMeta):
-                unrefreshed = annotation
-                annotation, initialized = refresh(annotation, vdims, halt)
-                if not initialized:
-                    continue
-                rep = type_representation(kwarg)
-                if not isinstance(kwarg, annotation):
-                    fail_argument(name, annotation, rep, halt)
-                else:
-                    pass_argument(name, annotation, rep)
-                    vdims = update_vplaceholders(vdims, annotation, unrefreshed, kwarg)
-
-        # Check return.
-        ret = decorated(*args, **kwargs)
-        return_annotation = annotations["return"]
-        if isinstance(return_annotation, SubscriptableMeta):
-            unrefreshed = return_annotation
-            return_annotation, initialized = refresh(return_annotation, vdims, halt)
-            if initialized:
-                rep = type_representation(ret)
-                if not isinstance(ret, return_annotation):
-                    fail_return(0, return_annotation, rep, halt)
-                else:
-                    pass_return(0, return_annotation, rep)
-                    vdims = update_vplaceholders(
-                        vdims, return_annotation, unrefreshed, ret
-                    )
+        for name, kwarg in defaulted_kwargs.items():
+            vdims = check_annotation(kwarg, name, annotations, vdims)
 
         # TODO: Treat tuples, lists, sequences recursively.
+        # Check return.
+        ret = decorated(*args, **kwargs)
+        vdims = check_annotation(ret, "return", annotations, vdims)
 
         return ret
 
