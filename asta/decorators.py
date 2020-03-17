@@ -11,161 +11,11 @@ from sympy import solvers
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
 
-import asta.dims
-from asta.dims import Placeholder
-from asta.utils import shapecheck
-from asta.array import Array
-from asta._array import _ArrayMeta
-from asta.classes import SubscriptableMeta
-from asta.constants import torch, _TORCH_IMPORTED
+from asta.origins import check_annotation
 from asta.display import (
-    type_representation,
-    pass_argument,
-    pass_return,
-    fail_argument,
-    fail_return,
-    fail_uninitialized,
     fail_system,
     get_header,
 )
-
-
-METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
-
-if _TORCH_IMPORTED:
-    from asta.tensor import Tensor
-    from asta._tensor import _TensorMeta
-
-    METAMAP[_TensorMeta] = Tensor
-
-
-def refresh(
-    annotation: SubscriptableMeta, halt: bool
-) -> Tuple[SubscriptableMeta, bool]:
-    """ Load an asta type annotation containing classical placeholders. """
-    dtype = annotation.dtype
-    shape = annotation.shape
-    dimvars = []
-    initialized = True
-    uninitialized_placeholder_names: Set[str] = set()
-
-    if annotation.shape is not None:
-        for item in annotation.shape:
-
-            # Handle fixed placeholders.
-            if isinstance(item, Placeholder):
-                placeholder = item
-                dimvar = getattr(asta.dims, placeholder.name)
-
-                # Catch uninitialized placeholders.
-                if isinstance(dimvar, Placeholder):
-                    initialized = False
-                    name = placeholder.name
-                    if name not in uninitialized_placeholder_names:
-                        fail_uninitialized(name, annotation, halt=halt)
-                    uninitialized_placeholder_names.add(name)
-
-                # Handle case where placeholder is unpacked in annotation.
-                if placeholder.unpacked:
-                    for elem in dimvar:
-                        dimvars.append(elem)
-                else:
-                    dimvars.append(dimvar)
-            else:
-                dimvars.append(item)
-        assert len(dimvars) == len(shape)
-        shape = tuple(dimvars)
-
-    # Note we're guaranteed that ``annotation`` has type ``SubscriptableMeta``.
-    subscriptable_class = METAMAP[type(annotation)]
-
-    refreshed_annotation: SubscriptableMeta
-    if shape is not None:
-        refreshed_annotation = subscriptable_class[dtype, shape]  # type: ignore
-    else:
-        refreshed_annotation = subscriptable_class[dtype]
-
-    return refreshed_annotation, initialized
-
-
-def get_equations(
-    equations: Set[Expr],
-    annotation: SubscriptableMeta,
-    unrefreshed: SubscriptableMeta,
-    arg: Any,
-) -> Set[Expr]:
-    """ TODO: Update: Returns equations with actual values inserted. """
-    annotation_equations: Set[Expr] = set()
-
-    if annotation.shape is not None:
-        assert unrefreshed.shape is not None
-
-        # Handle case where type(shape) != tuple, e.g. ``torch.Size``.
-        arg_shape = tuple(arg.shape)
-        assert not isinstance(arg_shape, torch.Size)
-
-        # Grab the pieces of the instance shape corresponding to annotation
-        # shape elements.
-        match, annotation_equations = shapecheck(arg_shape, annotation.shape)
-        assert match
-
-    equations = equations.union(annotation_equations)
-
-    return equations
-
-
-def check_annotation(
-    val: Any, name: str, annotations: Dict[str, Any], equations: Set[Expr]
-) -> Set[Expr]:
-    """ Check if ``val`` is of type ``annotation`` for asta types only. """
-    annotation = annotations[name]
-    halt = os.environ["ASTA_TYPECHECK"] == "2"
-
-    # TODO: The solution to the set of equations for each individual annotation
-    # should be unique. If there is no solution, print/raise an error. If there
-    # are multiple solutions, raise an error; someone is trying to do inference
-    # on way too many variables.
-
-    # Thus there should be no need to iterate over the function signature more
-    # than once. A single isinstance check should always be sufficient to
-    # determine if there is a solution. However, that does not mean that single
-    # isinstance checks are self-contained. In addition to specifying a unique
-    # solution, all the annotations' solutions must agree for a given function
-    # signature.
-
-    # Determine which display functions to use.
-    if name == "return":
-        fail_fn = fail_return
-        pass_fn = pass_return
-    else:
-        fail_fn = fail_argument
-        pass_fn = pass_argument
-
-    # Only check if the annotation is an asta subscriptable class.
-    if isinstance(annotation, SubscriptableMeta):
-        unrefreshed = annotation
-        annotation, initialized = refresh(annotation, halt)
-        if not initialized:
-            return equations
-
-        # Check if the literal ``val`` matches the annotation.
-        rep: str = type_representation(val)
-        # HARDCODE
-        identifier = "0" if name == "return" else name
-
-        # If the isinstance check fails, print/raise an error.
-        # TODO: All the equation logic should be dumped into the isinstance methods.
-        if not isinstance(val, annotation):
-            fail_fn(identifier, annotation, rep, halt)
-
-        # Otherwise, print a pass.
-        else:
-            pass_fn(identifier, annotation, rep)
-
-            # Update variable dimension map.
-            equations = get_equations(equations, annotation, unrefreshed, val)
-
-    return equations
 
 
 def validate_annotations(  # type: ignore[no-untyped-def]
@@ -292,13 +142,17 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         )
 
         # Check arguments.
-        for name, kwarg in checkable_args.items():
-            equations = check_annotation(kwarg, name, annotations, equations)
+        for name, arg in checkable_args.items():
+            annotation = annotations[name]
+            equations = check_annotation(name, arg, annotation, equations)
+        del annotation
 
         # TODO: Treat tuples, lists, sequences recursively.
         # Check return.
         ret = decorated(*args, **kwargs)
-        equations = check_annotation(ret, "return", annotations, equations)
+        annotation = annotations["return"]
+        equations = check_annotation("return", ret, annotation, equations)
+        del annotation
 
         # TODO: Consider putting this in its own function.
         # Solve our system of equations if it is nonempty.

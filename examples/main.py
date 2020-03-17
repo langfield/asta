@@ -1,7 +1,7 @@
 """ Example script for testing typecheck toggling. """
 import torch
 from asta import dims, symbols
-from fn import add, product, first_argument
+from fn import add, product, first_argument, wrong_return, identical_returns
 
 
 def main() -> None:
@@ -39,6 +39,14 @@ def main() -> None:
     x = torch.ones((5, 5, 4))
     y = torch.ones((5, 5, 5))
     first_argument(x, y)
+
+    x = torch.ones((5, 5, 5))
+    y = torch.ones((5, 5, 5))
+    wrong_return(x, y)
+
+    x = torch.ones((6, 6, 6))
+    y = torch.ones((5, 5, 5))
+    identical_returns(x, y)
 
 
 if __name__ == "__main__":
