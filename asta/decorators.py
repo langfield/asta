@@ -92,7 +92,7 @@ def get_equations(
     annotation: SubscriptableMeta,
     unrefreshed: SubscriptableMeta,
     arg: Any,
-) -> Dict[Expr, int]:
+) -> Set[Expr]:
     """ TODO: Update: Returns equations with actual values inserted. """
 
     if annotation.shape is not None:
@@ -114,7 +114,6 @@ def get_equations(
             # If a class shape element is a sympy expression.
             # TODO: Consider changing these checks to use ``core.Basic``.
             if isinstance(item, (Symbol, Expr)):
-                vdim = item
                 assert len(piece) == 1
                 literal: int = piece[0]
 
@@ -127,7 +126,7 @@ def get_equations(
 
 def check_annotation(
     val: Any, name: str, annotations: Dict[str, Any], equations: Set[Expr]
-) -> Dict[Expr, int]:
+) -> Set[Expr]:
     """ Check if ``val`` is of type ``annotation`` for asta types only. """
     annotation = annotations[name]
     halt = os.environ["ASTA_TYPECHECK"] == "2"

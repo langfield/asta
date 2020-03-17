@@ -2,26 +2,28 @@
 # -*- coding: utf-8 -*-
 # type: ignore
 """ Tests for the 'Array' typing class. """
-from typing import Tuple, List
-
-import pytest
 import numpy as np
-import hypothesis.strategies as st
-import hypothesis.extra.numpy as hnp
-from hypothesis import given, assume
 
-from asta import Array, Scalar, vdims
-from asta.utils import rand_split_shape
-from asta.tests import strategies as strats
+from asta import Array, vdims
 
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter, invalid-name
 
 
 def test_array_takes_expression_arguments() -> None:
     """ Make sure sympy symbols and expressions work as intended. """
     X = vdims.X
+    Y = vdims.Y
+    Z = vdims.Z
     a = np.zeros((1, 2, 3))
+
+    # Univariate.
     assert isinstance(a, Array[X, X + 1, X + 2])
+    assert isinstance(a, Array[X + 10, X + 11, X + 12])
     assert not isinstance(a, Array[X, X, X])
     assert not isinstance(a, Array[X, X + 1, X])
     assert not isinstance(a, Array[X, X + 1, X + 3])
+
+    # Multivariate.
+    assert isinstance(a, Array[X, X + 1, Y])
+    assert isinstance(a, Array[X, Y, X + 2])
+    assert isinstance(a, Array[X, Y, Z])

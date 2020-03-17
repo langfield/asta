@@ -3,9 +3,11 @@
 """ Typechecking utilities. """
 import random
 import functools
-from typing import List, Dict, Tuple, Union, Any
+from typing import List, Dict, Tuple, Union, Any, Set
 
+from sympy import solvers, simplify
 from sympy.core.expr import Expr
+from sympy.core.symbol import Symbol
 from asta.constants import EllipsisType, torch, _TORCH_IMPORTED
 
 # pylint: disable=too-many-boolean-expressions
@@ -19,14 +21,14 @@ def shapecheck(
     match = True
     assert isinstance(inst_shape, tuple)
 
-    vdims: Dict[Expr, int] = {}
+    equations: Set[Expr] = set()
 
     # The portions of ``inst_shape`` which correspond to each ``cls_shape`` elem.
     shape_pieces: List[Tuple[int, ...]] = []
 
     # Case 1: No ellipses or wildcards.
     if Ellipsis not in cls_shape and -1 not in cls_shape:
-        equal, vdims = check_equal(cls_shape, inst_shape, vdims)
+        equal, equations = check_equal(cls_shape, inst_shape, equations)
         if not equal:
             match = False
         shape_pieces = [(elem,) for elem in inst_shape]
@@ -46,7 +48,7 @@ def shapecheck(
 
     # Case 5: Everything else.
     else:
-        if is_subtuple((Ellipsis, Ellipsis), cls_shape, vdims)[0]:
+        if is_subtuple((Ellipsis, Ellipsis), cls_shape, equations)[0]:
             raise TypeError("Invalid shape: repeated '...'")
 
         # Determine if/where '...' bookends ``cls_shape``.
@@ -76,7 +78,7 @@ def shapecheck(
         for i, frag in enumerate(frags):
 
             # Look for ``frag`` in ``ishape``, and find starting index.
-            is_sub, index, vdims = is_subtuple(frag, ishape, vdims)
+            is_sub, index, equations = is_subtuple(frag, ishape, equations)
 
             # Must have ``frag`` contained in ``ishape``.
             if not is_sub:
@@ -136,22 +138,35 @@ def shapecheck(
             assert reconstructed == inst_shape
             assert len(shape_pieces) == len(cls_shape) == cls_idx
 
+    # Solve our system of equations if it is nonempty.
+    if match and equations:
+        symbols: Set[Symbol] = set()
+        for equation in equations:
+            symbols = symbols.union(equation.free_symbols)
+        solutions: List[Dict[Symbol, int]] = solvers.solve(
+            equations, symbols, dict=True
+        )
+
+        # If we don't get a unique solution, it's not a match.
+        if len(solutions) != 1:
+            match = False
+
     return match, shape_pieces
 
 
 def is_subtuple(
     sub: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
     tup: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
-    vdims: Dict[Expr, int],
-) -> Tuple[bool, int, Dict[Expr, int]]:
+    equations: Set[Expr],
+) -> Tuple[bool, int, Set[Expr]]:
     """ Check for tuple inclusion, return index of first one. """
     assert isinstance(sub, tuple)
     assert isinstance(tup, tuple)
     for i in range(len(tup) - len(sub) + 1):
-        equal, vdims = check_equal(sub, tup[i : i + len(sub)], vdims)
+        equal, equations = check_equal(sub, tup[i : i + len(sub)], equations)
         if equal:
-            return True, i, vdims
-    return False, -1, vdims
+            return True, i, equations
+    return False, -1, equations
 
 
 def split(
@@ -184,19 +199,21 @@ def split(
 def check_equal(
     shape_1: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
     shape_2: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
-    vdims: Dict[Expr, int],
-) -> Tuple[bool, Dict[Expr, int]]:
+    equations: Set[Expr],
+) -> Tuple[bool, Set[Expr]]:
     """
     Determines if two shape tuples are equal, allowing wildcards (``-1``),
-    which can take the place of an positive integer, and vdims, which can take
+    which can take the place of an positive integer, and equations, which can take
     the place of a fixed positive integer. They are set to the first value
     matched and fixed within a single isinstance check and within a single
     function typecheck operation. We also allow Ellipses, but these are treated
     as atomic elements.
     """
     if len(shape_1) != len(shape_2):
-        return False, vdims
+        return False, equations
     for x, y in zip(shape_1, shape_2):
+
+        # Case 1: Both are integer literals.
         if (
             isinstance(x, int)
             and isinstance(y, int)
@@ -204,33 +221,27 @@ def check_equal(
         ):
             continue
 
+        # Case 2: ``x`` is an expression.
         if isinstance(x, Expr) and isinstance(y, int):
-            if x not in vdims:
-                vdims[x] = y
-            elif vdims[x] != y:
-                return False, vdims
+            equations.add(x - y)
             continue
 
+        # Case 3: ``y`` is an expression.
         if isinstance(y, Expr) and isinstance(x, int):
-            if y not in vdims:
-                vdims[y] = x
-            elif vdims[y] != x:
-                return False, vdims
+            equations.add(y - x)
             continue
 
         # # TODO: Check mathematical equality with sympy.
         if isinstance(x, Expr) and isinstance(y, Expr):
-            if x in vdims and y in vdims and vdims[x] != vdims[y]:
-                return False, vdims
-            if x in vdims and y not in vdims:
-                vdims[y] = vdims[x]
-            elif y in vdims and x not in vdims:
-                vdims[x] = vdims[y]
+
+            # TODO: Possibly substitute existing values here.
+            if simplify(x - y) != 0:
+                return False, equations
             continue
 
         if x != y:
-            return False, vdims
-    return True, vdims
+            return False, equations
+    return True, equations
 
 
 def rand_split_shape(shape: Any) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:

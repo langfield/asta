@@ -78,7 +78,7 @@ def parse_subscript(
         empty_err += "Use '{cls.NAME}[None]' to indicate a scalar."
         raise TypeError(empty_err)
 
-    if isinstance(shape, tuple) and is_subtuple((..., ...), shape, {})[0]:
+    if isinstance(shape, tuple) and is_subtuple((..., ...), shape, set())[0]:
         raise TypeError("Invalid shape: repeated '...'")
 
     return dtype, shape, kind
