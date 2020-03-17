@@ -231,7 +231,6 @@ def check_equal(
             equations.add(y - x)
             continue
 
-        # # TODO: Check mathematical equality with sympy.
         if isinstance(x, Expr) and isinstance(y, Expr):
 
             # TODO: Possibly substitute existing values here.
