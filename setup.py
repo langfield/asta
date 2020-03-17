@@ -69,7 +69,7 @@ setup(
     packages=["asta"],
     long_description=read("README"),
     long_description_content_type="text",
-    install_requires=["numpy", "torch"],
+    install_requires=["numpy", "sympy"],
     python_requires=">=3.7.0",
     classifiers=[
         "Development Status :: 3 - Alpha",

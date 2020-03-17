@@ -218,6 +218,7 @@ def check_equal(
                 return False, vdims
             continue
 
+        # # TODO: Check mathematical equality with sympy.
         if isinstance(x, Expr) and isinstance(y, Expr):
             if x in vdims and y in vdims and vdims[x] != vdims[y]:
                 return False, vdims
