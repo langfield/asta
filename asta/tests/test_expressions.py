@@ -4,16 +4,16 @@
 """ Tests for the 'Array' typing class. """
 import numpy as np
 
-from asta import Array, vdims
+from asta import Array, symbols
 
 # pylint: disable=no-value-for-parameter, invalid-name
 
 
 def test_array_takes_expression_arguments() -> None:
     """ Make sure sympy symbols and expressions work as intended. """
-    X = vdims.X
-    Y = vdims.Y
-    Z = vdims.Z
+    X = symbols.X
+    Y = symbols.Y
+    Z = symbols.Z
     a = np.zeros((1, 2, 3))
 
     # Univariate.

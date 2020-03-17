@@ -262,7 +262,7 @@ Todo
 
   The above constraint would only pass for shapes ``(n, 2n, 4n, 8n...)``.
   To enforce it, you would use ``Array[fn]``.
-- Consider allowing instantiation to support kwargs.
+- Consider allowing instantiation to support kwargs. (DETAILED BELOW)
 - Consider adding a delimiter in the typecheck decorator output to distinguish
   the typecheck passes between different functions and signatures. Something
   like ``===============<asta.typechecked_function()>===============``. (DONE)
@@ -272,25 +272,28 @@ Todo
 - Write tests for ``Scalar``.
 - Write analogues of new ``Array`` tests for ``Tensor``. (DONE)
 - Consider reserving ``None`` shape and type for unintialized shape globals.
+  (NO)
   Attempting to typecheck with them will raise an error warning that they are
   uninitialized. Then you can set your dim variable defaults in config module
   all to ``None``. (DONE)
 - Add uninitialized dimension size error to decorator. See preceding note.
+  (DONE)
 - Add section in README about using ``asta.dims`` for programmatically-set
   dimension sizes in shape annotations.
 - Fix base class of ``_ArrayMeta`` and ``_TensorMeta`` so that type ignore is
   not needed in ``decorators.py``.
 - Consider removing library-specific metaclasses.
 - Consider making ``parse_subscript`` a classmethod of ``SubscriptableMeta``.
+  (NO)
 - Remove torch, tensorflow from requirements. You should be able to ues
   ``Array`` without torch installed. (DONE)
 - When you try to import Tensor when torch is not installed, no error should be
   raised. But when you then try to use/subscript Tensor, an error should be
   raised. So it should still be a subscriptable type, but the subscription
-  method should try to import torch.
+  method should try to import torch. (DONE)
 - Consider adding a ``soft`` mode where the decorator only prints errors
   instead of raising them, so that a user could see and correct all of them at
-  once.
+  once. (DONE)
 - Consider adding support for checking arbitrary attributes on arrays and
   tensors. For example, if working on a reinforcement learning problem, and you
   wanted to make sure all tensors have the same timestep index, you could seta
