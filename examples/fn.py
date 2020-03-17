@@ -1,9 +1,11 @@
 """ Example function for shapechecking. """
+from typing import Tuple
 import torch
 from asta import Tensor, typechecked, check, dims, symbols
 
 DIM = dims.DIM
 X = symbols.X
+Y = symbols.Y
 
 
 @typechecked
@@ -29,3 +31,19 @@ def first_argument(
 ) -> Tensor[float, X, X, X]:
     """ Returns first argument with variable shape. """
     return x
+
+
+@typechecked
+def wrong_return(
+    x: Tensor[float, X, X, X], y: Tensor[float, X, X, X],
+) -> Tuple[Tensor[float, X, X, X + 1], Tensor[float, X, X, X]]:
+    """ Returns first argument with variable shape. """
+    return x, x
+
+
+@typechecked
+def identical_returns(
+    x: Tensor[float, X, X, X], y: Tensor[float, Y, Y, Y],
+) -> Tuple[Tensor[float, X, X, X], Tensor[float, X, X, X]]:
+    """ Returns first argument with variable shape. """
+    return x, y
