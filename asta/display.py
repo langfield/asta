@@ -89,7 +89,8 @@ def fail_system(
     """ Print/raise typecheck fail error for uninitialized placeholder. """
     failed = f"{Color.RED}FAILED{Color.END}"
     solution_err = f"No unique solution (found {len(solutions)})"
-    type_err = f"{failed}: {solution_err} for system: {equations} of symbols: {symbols}"
+    type_err = f"{failed}: {solution_err} for system "
+    type_err += f"'{equations}' of symbols '{symbols}'"
     if halt:
         raise TypeError(type_err)
     print(type_err)
@@ -97,13 +98,13 @@ def fail_system(
 
 def get_header(decorated) -> str:  # type: ignore[no-untyped-def]
     """ Print the typecheck header. """
-    fn_rep = f"{Color.BOLD}{decorated.__module__}.{decorated.__name__}(){Color.END}"
-    core = f"<asta::@typechecked::{fn_rep}>"
+    core = f"asta::{decorated.__module__}.{decorated.__name__}()"
+    bold_core = f"<{Color.BOLD}{core}{Color.END}>"
     min_pad_size = 10
-    pad_size = 80 - len(core)
+    pad_size = 100 - (len(core) + 2)
     side_size = max(pad_size // 2, min_pad_size)
     pad_parity = pad_size % 2 if side_size > 10 else 0
     left_padding = "=" * side_size
     right_padding = "=" * (side_size + pad_parity)
-    header = f"{left_padding}{core}{right_padding}"
+    header = f"{left_padding}{bold_core}{right_padding}"
     return header

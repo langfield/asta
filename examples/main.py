@@ -1,6 +1,6 @@
 """ Example script for testing typecheck toggling. """
 import torch
-from asta import dims, vdims
+from asta import dims, symbols
 from fn import add, product, first_argument
 
 

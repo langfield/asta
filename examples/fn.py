@@ -1,9 +1,9 @@
 """ Example function for shapechecking. """
 import torch
-from asta import Tensor, typechecked, check, dims, vdims
+from asta import Tensor, typechecked, check, dims, symbols
 
 DIM = dims.DIM
-X = vdims.X
+X = symbols.X
 
 
 @typechecked
