@@ -4,6 +4,7 @@
 from typing import Optional, Tuple, Union
 
 from sympy.core.expr import Expr
+from sympy.core.symbol import Symbol
 
 from asta.utils import is_subtuple
 from asta.scalar import Scalar
@@ -47,10 +48,12 @@ def parse_subscript(
         # Case where generic type is specified.
         if isinstance(item[0], (type, dtype_metaclass)) and item[0] != Scalar:
             dtype, kind = cls.get_dtype(item[0])
+
+            # TODO: There is code duplication here and below, fix.
             for dim in item[1:]:
 
                 # Treat sympy expressions specially.
-                if isinstance(dim, Expr):
+                if isinstance(dim, (Expr, Symbol)):
                     pass
                 elif type(dim) not in cls.DIM_TYPES:
                     err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
@@ -61,7 +64,11 @@ def parse_subscript(
         # Case where generic type is unspecified.
         else:
             for dim in item:
-                if type(dim) not in cls.DIM_TYPES:
+
+                # Treat sympy expressions specially.
+                if isinstance(dim, (Expr, Symbol)):
+                    pass
+                elif type(dim) not in cls.DIM_TYPES:
                     err = f"Invalid dimension '{dim}' of type '{type(dim)}'. "
                     err += f"Valid dimension types: {cls.DIM_TYPES}"
                     raise TypeError(err)

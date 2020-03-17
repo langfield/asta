@@ -7,7 +7,9 @@ import os
 import inspect
 from typing import Any, Tuple, Dict, Set
 
+from sympy import solvers
 from sympy.core.expr import Expr
+from sympy.core.symbol import Symbol
 
 import asta.dims
 from asta.dims import Placeholder
@@ -37,9 +39,9 @@ if _TORCH_IMPORTED:
 
 
 def refresh(
-    annotation: SubscriptableMeta, vdims: Dict[Expr, int], halt: bool,
+    annotation: SubscriptableMeta, halt: bool
 ) -> Tuple[SubscriptableMeta, bool]:
-    """ Load an asta type annotation containing placeholders. """
+    """ Load an asta type annotation containing classical placeholders. """
     dtype = annotation.dtype
     shape = annotation.shape
     dimvars = []
@@ -68,20 +70,6 @@ def refresh(
                         dimvars.append(elem)
                 else:
                     dimvars.append(dimvar)
-
-            # Handle sympy expressions.
-            elif isinstance(item, Expr):
-                vdim = item
-
-                # TODO: Maybe don't do this to make display consistent?
-                # Add the value of the expression if it has already been set.
-                if vdim in vdims:
-                    dimvar = vdims[vdim]
-                    dimvars.append(dimvar)
-
-                # Otherwise, add the expression itself.
-                else:
-                    dimvars.append(vdim)
             else:
                 dimvars.append(item)
         assert len(dimvars) == len(shape)
@@ -99,15 +87,13 @@ def refresh(
     return refreshed_annotation, initialized
 
 
-def update_vplaceholders(
-    vdims: Dict[Expr, int],
+def get_equations(
+    equations: Set[Expr],
     annotation: SubscriptableMeta,
     unrefreshed: SubscriptableMeta,
     arg: Any,
 ) -> Dict[Expr, int]:
-    """ Returns an updated copy of vdims with actual values inserted. """
-    # Copy the input vdims.
-    new_vdims: Dict[Expr, int] = vdims.copy()
+    """ TODO: Update: Returns equations with actual values inserted. """
 
     if annotation.shape is not None:
         assert unrefreshed.shape is not None
@@ -126,22 +112,21 @@ def update_vplaceholders(
         for item, piece in zip(unrefreshed.shape, shape_pieces):
 
             # If a class shape element is a sympy expression.
-            if isinstance(item, Expr):
+            # TODO: Consider changing these checks to use ``core.Basic``.
+            if isinstance(item, (Symbol, Expr)):
                 vdim = item
                 assert len(piece) == 1
                 literal: int = piece[0]
 
-                # Attempt to update the vdims map.
-                if vdim not in new_vdims:
-                    new_vdims[vdim] = literal
-                elif vdim in new_vdims and new_vdims[vdim] != literal:
-                    raise TypeError("This should never happen.")
+                # Create an equation (set equal to zero).
+                equation: Expr = item - literal
+                equations.add(equation)
 
-    return new_vdims
+    return equations
 
 
 def check_annotation(
-    val: Any, name: str, annotations: Dict[str, Any], vdims: Dict[Expr, int]
+    val: Any, name: str, annotations: Dict[str, Any], equations: Set[Expr]
 ) -> Dict[Expr, int]:
     """ Check if ``val`` is of type ``annotation`` for asta types only. """
     annotation = annotations[name]
@@ -170,9 +155,9 @@ def check_annotation(
     # Only check if the annotation is an asta subscriptable class.
     if isinstance(annotation, SubscriptableMeta):
         unrefreshed = annotation
-        annotation, initialized = refresh(annotation, vdims, halt)
+        annotation, initialized = refresh(annotation, halt)
         if not initialized:
-            return vdims
+            return equations
 
         # Check if the literal ``val`` matches the annotation.
         rep: str = type_representation(val)
@@ -180,6 +165,7 @@ def check_annotation(
         identifier = "0" if name == "return" else name
 
         # If the isinstance check fails, print/raise an error.
+        # TODO: All the equation logic should be dumped into the isinstance methods.
         if not isinstance(val, annotation):
             fail_fn(identifier, annotation, rep, halt)
 
@@ -188,9 +174,9 @@ def check_annotation(
             pass_fn(identifier, annotation, rep)
 
             # Update variable dimension map.
-            vdims = update_vplaceholders(vdims, annotation, unrefreshed, val)
+            equations = get_equations(equations, annotation, unrefreshed, val)
 
-    return vdims
+    return equations
 
 
 def validate_annotations(  # type: ignore[no-untyped-def]
@@ -264,7 +250,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         header: str = get_header(decorated)
         print(header)
 
-        vdims: Dict[Expr, int] = {}
+        equations: Set[Expr] = set()
         annotations: Dict[str, Any] = decorated.__annotations__
         checkable_args, defaulted_kwargs = validate_annotations(
             decorated,
@@ -279,16 +265,16 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         # Check positional arguments.
         for i, arg in enumerate(checkable_args):
             name = list(annotations.keys())[i]
-            vdims = check_annotation(arg, name, annotations, vdims)
+            equations = check_annotation(arg, name, annotations, equations)
 
         # Check keyword arguments.
         for name, kwarg in defaulted_kwargs.items():
-            vdims = check_annotation(kwarg, name, annotations, vdims)
+            equations = check_annotation(kwarg, name, annotations, equations)
 
         # TODO: Treat tuples, lists, sequences recursively.
         # Check return.
         ret = decorated(*args, **kwargs)
-        vdims = check_annotation(ret, "return", annotations, vdims)
+        equations = check_annotation(ret, "return", annotations, equations)
 
         return ret
 

@@ -3,6 +3,7 @@ import datetime
 from typing import Dict, List, Any
 import numpy as np
 from sympy.core.expr import Expr
+from sympy.core.symbol import Symbol
 from asta.dims import Placeholder
 
 _TORCH_IMPORTED = False
@@ -112,6 +113,7 @@ CORE_DIM_TYPES: List[type] = [
     tuple,
     Placeholder,
     Expr,
+    Symbol,
 ]
 NUMPY_DIM_TYPES: List[type] = CORE_DIM_TYPES
 TORCH_DIM_TYPES: List[type] = CORE_DIM_TYPES + [torch.Size]
