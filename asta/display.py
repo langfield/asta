@@ -1,7 +1,9 @@
 """ Functions for generating typechecker output. """
-from typing import Any, Dict
+from typing import Any, Dict, Set, List
 
 import numpy as np
+from sympy.core.expr import Expr
+from sympy.core.symbol import Symbol
 
 from asta.array import Array
 from asta._array import _ArrayMeta
@@ -73,6 +75,21 @@ def fail_uninitialized(name: str, ann: SubscriptableMeta, halt: bool) -> None:
     """ Print/raise typecheck fail error for uninitialized placeholder. """
     failed = f"{Color.RED}FAILED{Color.END}"
     type_err = f"{failed}: Uninitialized placeholder '{name}'"
+    if halt:
+        raise TypeError(type_err)
+    print(type_err)
+
+
+def fail_system(
+    equations: Set[Expr],
+    symbols: Set[Symbol],
+    solutions: List[Dict[Symbol, int]],
+    halt: bool,
+) -> None:
+    """ Print/raise typecheck fail error for uninitialized placeholder. """
+    failed = f"{Color.RED}FAILED{Color.END}"
+    solution_err = f"No unique solution (found {len(solutions)})"
+    type_err = f"{failed}: {solution_err} for system: {equations} of symbols: {symbols}"
     if halt:
         raise TypeError(type_err)
     print(type_err)

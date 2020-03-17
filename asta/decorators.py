@@ -5,7 +5,7 @@ This module contains decorators.
 """
 import os
 import inspect
-from typing import Any, Tuple, Dict, Set
+from typing import Any, Tuple, Dict, Set, List
 
 from sympy import solvers
 from sympy.core.expr import Expr
@@ -25,6 +25,7 @@ from asta.display import (
     fail_argument,
     fail_return,
     fail_uninitialized,
+    fail_system,
     get_header,
 )
 
@@ -94,6 +95,7 @@ def get_equations(
     arg: Any,
 ) -> Set[Expr]:
     """ TODO: Update: Returns equations with actual values inserted. """
+    annotation_equations: Set[Expr] = set()
 
     if annotation.shape is not None:
         assert unrefreshed.shape is not None
@@ -104,22 +106,10 @@ def get_equations(
 
         # Grab the pieces of the instance shape corresponding to annotation
         # shape elements.
-        match, shape_pieces = shapecheck(arg_shape, annotation.shape)
+        match, annotation_equations = shapecheck(arg_shape, annotation.shape)
         assert match
-        assert len(annotation.shape) == len(unrefreshed.shape) == len(shape_pieces)
 
-        # Iterate over class shape and corresponding instance shape pieces.
-        for item, piece in zip(unrefreshed.shape, shape_pieces):
-
-            # If a class shape element is a sympy expression.
-            # TODO: Consider changing these checks to use ``core.Basic``.
-            if isinstance(item, (Symbol, Expr)):
-                assert len(piece) == 1
-                literal: int = piece[0]
-
-                # Create an equation (set equal to zero).
-                equation: Expr = item - literal
-                equations.add(equation)
+    equations = equations.union(annotation_equations)
 
     return equations
 
@@ -274,6 +264,21 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         # Check return.
         ret = decorated(*args, **kwargs)
         equations = check_annotation(ret, "return", annotations, equations)
+
+        # TODO: Consider putting this in its own function.
+        # Solve our system of equations if it is nonempty.
+        if equations:
+            symbols: Set[Symbol] = set()
+            for equation in equations:
+                symbols = symbols.union(equation.free_symbols)
+            solutions: List[Dict[Symbol, int]] = solvers.solve(
+                equations, symbols, dict=True
+            )
+
+            # If we don't get a unique solution, it's not a match.
+            if len(solutions) != 1:
+                halt = os.environ["ASTA_TYPECHECK"] == "2"
+                fail_system(equations, symbols, solutions, halt)
 
         return ret
 

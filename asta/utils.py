@@ -16,7 +16,7 @@ from asta.constants import EllipsisType, torch, _TORCH_IMPORTED
 def shapecheck(
     inst_shape: Tuple[int, ...],
     cls_shape: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
-) -> Tuple[bool, List[Tuple[int, ...]]]:
+) -> Tuple[bool, Set[Expr]]:
     """ Check ``inst_shape`` is an instance of ``cls_shape``. """
     match = True
     assert isinstance(inst_shape, tuple)
@@ -151,7 +151,7 @@ def shapecheck(
         if len(solutions) != 1:
             match = False
 
-    return match, shape_pieces
+    return match, equations
 
 
 def is_subtuple(
