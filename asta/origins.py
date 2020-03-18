@@ -19,7 +19,7 @@ from asta.display import (
     fail_return,
     fail_uninitialized,
 )
-from asta.constants import torch, _TORCH_IMPORTED
+from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
 
 METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
 
@@ -28,6 +28,12 @@ if _TORCH_IMPORTED:
     from asta._tensor import _TensorMeta
 
     METAMAP[_TensorMeta] = Tensor
+
+if _TENSORFLOW_IMPORTED:
+    from asta.tftensor import TFTensor
+    from asta._tftensor import _TFTensorMeta
+
+    METAMAP[_TFTensorMeta] = TFTensor
 
 
 def qualified_name(obj: Any) -> str:
@@ -161,23 +167,19 @@ def refresh(
 
 
 def get_equations(
-    equations: Set[Expr],
-    annotation: SubscriptableMeta,
-    unrefreshed: SubscriptableMeta,
-    arg: Any,
+    equations: Set[Expr], annotation: SubscriptableMeta, arg: Any,
 ) -> Set[Expr]:
-    """ TODO: Update: Returns equations with actual values inserted. """
+    """ Computes subscript argument equations via a shapecheck call. """
     annotation_equations: Set[Expr] = set()
 
     if annotation.shape is not None:
-        assert unrefreshed.shape is not None
 
+        # HARDCODE
         # Handle case where type(shape) != tuple, e.g. ``torch.Size``.
         arg_shape = tuple(arg.shape)
         assert not isinstance(arg_shape, torch.Size)
 
-        # Grab the pieces of the instance shape corresponding to annotation
-        # shape elements.
+        # Grab equations from shapecheck call.
         match, annotation_equations = shapecheck(arg_shape, annotation.shape)
         assert match
 
@@ -224,7 +226,6 @@ def check_annotation(
 
     # Only check if the annotation is an asta subscriptable class.
     if isinstance(annotation, SubscriptableMeta):
-        unrefreshed = annotation
         annotation, initialized = refresh(annotation, halt)
         if not initialized:
             return equations
@@ -244,7 +245,7 @@ def check_annotation(
             pass_fn(identifier, annotation, rep)
 
             # Update variable dimension map.
-            equations = get_equations(equations, annotation, unrefreshed, val)
+            equations = get_equations(equations, annotation, val)
 
     elif origin is not None:
         checker_fn = ORIGIN_TYPE_CHECKERS[origin]
