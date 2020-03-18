@@ -147,7 +147,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
             equations = check_annotation(name, arg, annotation, equations)
         del annotation
 
-        # TODO: Treat tuples, lists, sequences recursively.
+        # TODO: Treat lists, sequences recursively.
         # Check return.
         ret = decorated(*args, **kwargs)
         annotation = annotations["return"]

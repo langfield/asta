@@ -39,7 +39,9 @@ def type_representation(arg: Any) -> str:
 def pass_argument(name: str, ann: SubscriptableMeta, rep: str) -> None:
     """ Print typecheck pass notification for arguments. """
     passed = f"{Color.GREEN}PASSED{Color.END}"
-    print(f"{passed}: Arg '{name}' matched parameter '{ann}' with actual type: '{rep}'")
+    print(
+        f"{passed}: Argument '{name}' matched parameter '{ann}' with actual type: '{rep}'"
+    )
 
 
 def pass_return(name: str, ann: SubscriptableMeta, rep: str) -> None:
@@ -53,7 +55,7 @@ def pass_return(name: str, ann: SubscriptableMeta, rep: str) -> None:
 def fail_argument(name: str, ann: SubscriptableMeta, rep: str, halt: bool) -> None:
     """ Print/raise typecheck fail error for arguments. """
     failed = f"{Color.RED}FAILED{Color.END}"
-    type_err = f"{failed}: Argument value for parameter '{name}' "
+    type_err = f"{failed}: Argument '{name}' "
     type_err += f"has wrong type. Expected type: '{ann}' "
     type_err += f"Actual type: '{rep}'"
     if halt:
