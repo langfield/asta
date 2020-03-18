@@ -7,4 +7,4 @@ from asta.constants import _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
 if _TORCH_IMPORTED:
     from asta.tensor import Tensor
 if _TENSORFLOW_IMPORTED:
-    TFTensor = None  # type: ignore
+    from asta.tftensor import TFTensor

@@ -2,7 +2,7 @@
 |asta|
 +----+
 
-Shape annotations for homogeneous numpy arrays and pytorch tensors.
+Shape annotations for numpy arrays and pytorch/tensorflow tensors.
 
 Usage
 -----

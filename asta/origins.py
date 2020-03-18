@@ -44,7 +44,9 @@ def qualified_name(obj: Any) -> str:
     return qualname if module in ("typing", "builtins") else f"{module}.{qualname}"
 
 
-def check_tuple(name: str, value: Any, annotation: Any, equations: Set[Expr]) -> Set[Expr]:
+def check_tuple(
+    name: str, value: Any, annotation: Any, equations: Set[Expr]
+) -> Set[Expr]:
     """ Check an argument with annotation ``tuple`` or ``Tuple[]``. """
 
     # Specialized check for NamedTuples.
