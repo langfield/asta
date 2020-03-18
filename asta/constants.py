@@ -15,7 +15,7 @@ except ImportError:
     pass
 _TENSORFLOW_IMPORTED = False
 try:
-    import tensorflow
+    import tensorflow as tf
 
     _TENSORFLOW_IMPORTED = True
 except ImportError:
@@ -49,6 +49,28 @@ class TorchModule:
         self.float32 = NonInstanceType
         self.bool = NonInstanceType
         self.uint8 = NonInstanceType
+
+
+class DTypes:
+    """ A dummy dtypes attribute object for when tf is not installed. """
+
+    def __init__(self) -> None:
+        self.DType = NonInstanceType
+
+
+class TFModule:
+    """ A dummy tensorflow module for when tf is not installed. """
+
+    def __init__(self) -> None:
+        self.Tensor = NonInstanceType
+        self.TensorShape = NonInstanceType
+        self.dtypes = DTypes()
+        self.dtypes.DType = NonInstanceType
+        self.int64 = NonInstanceType
+        self.float64 = NonInstanceType
+        self.bool = NonInstanceType
+        self.complex128 = NonInstanceType
+        self.string = NonInstanceType
 
 
 class ScalarMeta(type):
@@ -88,10 +110,11 @@ class Color:
 
 if not _TORCH_IMPORTED:
     torch = TorchModule()
+    tf = TFModule()
 
 
 # Types.
-ARRAY_TYPES: List[type] = [np.ndarray, torch.Tensor]
+ARRAY_TYPES: List[type] = [np.ndarray, torch.Tensor, tf.Tensor]
 GENERIC_TYPES: List[type] = [
     bool,
     int,
@@ -117,27 +140,47 @@ CORE_DIM_TYPES: List[type] = [
 ]
 NUMPY_DIM_TYPES: List[type] = CORE_DIM_TYPES
 TORCH_DIM_TYPES: List[type] = CORE_DIM_TYPES + [torch.Size]
+TF_DIM_TYPES: List[type] = CORE_DIM_TYPES + [tf.TensorShape]
 NP_UNSIZED_TYPE_KINDS: Dict[type, str] = {bytes: "S", str: "U", object: "O"}
-NP_GENERIC_TYPES: List[type] = [
-    bool,
-    int,
-    float,
-    complex,
-    bytes,
-    str,
-    object,
-    np.datetime64,
-    np.timedelta64,
-]
-TORCH_GENERIC_TYPES: List[type] = [
-    bool,
-    int,
-    float,
-    bytes,
-]
 TORCH_DTYPE_MAP: Dict[type, torch.dtype] = {
     int: torch.int32,
     float: torch.float32,
     bool: torch.bool,
     bytes: torch.uint8,
 }
+TF_DTYPE_MAP: Dict[type, tf.dtypes.DType] = {
+    int: tf.int64,
+    float: tf.float64,
+    complex: tf.complex128,
+    bool: tf.bool,
+    bytes: tf.string,
+    str: tf.string,
+}
+TF_DTYPES = [
+    tf.bfloat16,
+    tf.bool,
+    tf.complex,
+    tf.complex128,
+    tf.complex64,
+    tf.double,
+    tf.float16,
+    tf.float32,
+    tf.float64,
+    tf.half,
+    tf.int16,
+    tf.int32,
+    tf.int64,
+    tf.int8,
+    tf.qint16,
+    tf.qint32,
+    tf.qint8,
+    tf.quint16,
+    tf.quint8,
+    tf.resource,
+    tf.string,
+    tf.uint16,
+    tf.uint32,
+    tf.uint64,
+    tf.uint8,
+    tf.variant,
+]
