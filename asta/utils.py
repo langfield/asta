@@ -3,25 +3,36 @@
 """ Typechecking utilities. """
 import random
 import functools
-from typing import List, Dict, Tuple, Union, Any, Set
+from typing import List, Dict, Tuple, Union, Any, Set, Optional
 
 from sympy import solvers, simplify
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
-from asta.constants import EllipsisType, torch, _TORCH_IMPORTED
+from asta.constants import (
+    EllipsisType,
+    NonInstanceType,
+    GenericArray,
+    torch,
+    tf,
+    _TORCH_IMPORTED,
+    _TENSORFLOW_IMPORTED,
+)
 
-# pylint: disable=too-many-boolean-expressions
+# pylint: disable=too-many-boolean-expressions, too-many-branches
 
 
 def shapecheck(
     inst_shape: Tuple[int, ...],
-    cls_shape: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
+    cls_shape: Optional[Tuple[Union[int, EllipsisType], ...]],  # type: ignore[valid-type]
 ) -> Tuple[bool, Set[Expr]]:
     """ Check ``inst_shape`` is an instance of ``cls_shape``. """
     match = True
-    assert isinstance(inst_shape, tuple)
-
     equations: Set[Expr] = set()
+
+    if cls_shape is None:
+        return match, equations
+
+    assert isinstance(inst_shape, tuple)
 
     # The portions of ``inst_shape`` which correspond to each ``cls_shape`` elem.
     shape_pieces: List[Tuple[int, ...]] = []
@@ -154,6 +165,30 @@ def shapecheck(
     return match, equations
 
 
+def attrcheck(
+    inst: GenericArray, kwattrs: Optional[Dict[str, Any]]
+) -> Tuple[bool, Set[Expr]]:
+    """ Check if ``inst`` has attributes matching ``kwattrs``. """
+    match = True
+    equations: Set[Expr] = set()
+    kwattrs = {} if kwattrs is None else kwattrs
+
+    assert isinstance(kwattrs, dict)
+
+    for key, value in kwattrs.items():
+        attr = getattr(inst, key, NonInstanceType)
+        if attr is NonInstanceType:
+            match = False
+            break
+        if isinstance(value, Expr):
+            equations.add(value - attr)
+        elif attr != value:
+            match = False
+            break
+
+    return match, equations
+
+
 def is_subtuple(
     sub: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
     tup: Tuple[Union[int, EllipsisType], ...],  # type: ignore[valid-type]
@@ -246,6 +281,8 @@ def rand_split_shape(shape: Any) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
     """ Splits a shape and removes a nonempty continguous portion. """
     if _TORCH_IMPORTED and isinstance(shape, torch.Size):
         shape = tuple(shape)
+    if _TENSORFLOW_IMPORTED and isinstance(shape, tf.TensorShape):
+        shape = tuple(shape)
     start = random.randrange(len(shape))
     end = random.randint(start + 1, len(shape))
     left = shape[:start]
@@ -253,14 +290,6 @@ def rand_split_shape(shape: Any) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
     return left, right
 
 
-def get_shape_rep(shape: Tuple[int, ...]) -> str:
+def shape_repr(shape: Tuple[int, ...]) -> str:
     """ Get stripped representation of a shape. """
-    if shape == ():
-        rep = f"Scalar"
-    elif len(shape) == 1:
-        rep = f"{shape[0]}"
-    else:
-        rep = repr(shape).strip("(").strip(")")
-    rep = rep.replace("Ellipsis", "...")
-
-    return rep
+    return repr(shape).replace("Ellipsis", "...")

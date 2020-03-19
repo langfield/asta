@@ -7,7 +7,7 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 import numpy as np
 import tensorflow as tf
 
-from asta.utils import get_shape_rep, shapecheck
+from asta.utils import shapecheck, attrcheck
 from asta.parser import parse_subscript
 from asta.classes import SubscriptableMeta, GenericMeta
 from asta.constants import (
@@ -20,10 +20,11 @@ from asta.constants import (
 
 
 class _TFTensorMeta(SubscriptableMeta):
-    """ A meta class for the ``Tensor`` class. """
+    """ A meta class for the ``TFTensor`` class. """
 
     shape: Union[tuple, tf.TensorShape]
     dtype: tf.dtypes.DType
+    kwattrs: Dict[str, Any]
 
     @classmethod
     @abstractmethod
@@ -43,32 +44,11 @@ class _TFTensorMeta(SubscriptableMeta):
             return False
         return True
 
-    def __repr__(cls) -> str:
-        """ String representation of ``Tensor`` class. """
-        assert hasattr(cls, "shape")
-        assert hasattr(cls, "dtype")
-        shape = cls.shape
-
-        if isinstance(shape, tf.TensorShape):
-            shape = tuple(shape.as_list())
-
-        if shape is None and cls.dtype is None:
-            rep = f"<asta.Tensor>"
-        elif shape is None and cls.dtype is not None:
-            rep = f"<asta.Tensor[{cls.dtype}]>"
-        elif shape is not None and cls.dtype is None:
-            shape_rep = get_shape_rep(shape)
-            rep = f"<asta.Tensor[{shape_rep}]>"
-        else:
-            shape_rep = get_shape_rep(shape)
-            rep = f"<asta.Tensor[{cls.dtype}, {shape_rep}]>"
-
-        return rep
-
     def __instancecheck__(cls, inst: Any) -> bool:
-        """ Support expected behavior for ``isinstance(<tensor>, Tensor[<args>])``. """
+        """ Support expected behavior for ``isinstance(<tensor>, TFTensor[<args>])``. """
         assert hasattr(cls, "shape")
         assert hasattr(cls, "dtype")
+        assert hasattr(cls, "kwattrs")
         match = False
         if isinstance(inst, tf.Tensor):
             match = True  # In case of an empty tensor.
@@ -78,48 +58,51 @@ class _TFTensorMeta(SubscriptableMeta):
                 match = False
 
             # Handle ellipses.
-            elif cls.shape is not None:
+            else:
 
                 # Cast instance shape to a tuple.
                 inst_shape = inst.shape
                 if isinstance(inst_shape, tf.TensorShape):
                     inst_shape = tuple(inst_shape)
 
-                match, _ = shapecheck(inst_shape, cls.shape)
+                shape_match, _ = shapecheck(inst_shape, cls.shape)
+                attr_match, _ = attrcheck(inst, cls.kwattrs)
+                match = shape_match and attr_match
 
         return match
 
 
 class _TFTensor(metaclass=_TFTensorMeta):
-    """ This class exists to keep the Tensor class as clean as possible. """
+    """ This class exists to keep the TFTensor class as clean as possible. """
 
-    NAME: str = "Tensor"
+    NAME: str = "TFTensor"
     DIM_TYPES: List[type] = TF_DIM_TYPES
     _TF_DTYPE_MAP: Dict[type, tf.dtypes.DType] = TF_DTYPE_MAP
 
     dtype: Optional[tf.dtypes.DType] = None
     shape: Optional[Tuple] = None
+    kwattrs: Optional[Dict[str, Any]] = None
 
     def __new__(cls, *args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
-        raise TypeError("Cannot instantiate abstract class 'Tensor'.")
+        raise TypeError("Cannot instantiate abstract class 'TFTensor'.")
 
     @classmethod
     def get_dtype(cls, item: Any) -> Tuple[Optional[tf.dtypes.DType], ...]:
         """ Computes dtype. """
         dtype = None
 
-        # Case where ``item`` is a dtype (``Tensor[tf.float64]``).
+        # Case where ``item`` is a dtype (``TFTensor[tf.float64]``).
         if isinstance(item, tf.dtypes.DType):
             dtype = item
 
         elif isinstance(item, np.dtype):
             np_dtype_err = f"Invalid type argument '{item}'. "
-            np_dtype_err += f"Numpy dtypes not supported for Tensor class. "
+            np_dtype_err += f"Numpy dtypes not supported for TFTensor class. "
             np_dtype_err += f"Type arguments must be tf.dtypes.DTypes or in "
             np_dtype_err += f"'{list(cls._TF_DTYPE_MAP.keys())}'."
             raise TypeError(np_dtype_err)
 
-        # Case where ``item`` is a python3 type (``Tensor[int]``).
+        # Case where ``item`` is a python3 type (``TFTensor[int]``).
         elif isinstance(item, type):
             generic_type = item
             if generic_type not in cls._TF_DTYPE_MAP:
@@ -138,6 +121,7 @@ class _TFTensor(metaclass=_TFTensorMeta):
         """ Set class attributes based on the passed dtype/dim data. """
         if isinstance(item, tf.TensorShape):
             item = tuple(item)
-        dtype, shape, _ = parse_subscript(cls, item, tf.dtypes.DType)
+        dtype, shape, kwattrs, _ = parse_subscript(cls, item, tf.dtypes.DType)
         cls.dtype = dtype
         cls.shape = shape
+        cls.kwattrs = kwattrs

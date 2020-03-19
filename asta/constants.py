@@ -1,9 +1,11 @@
 """ asta.constants """
 import datetime
-from typing import Dict, List, Any
+from typing import Dict, List, Union, Any
+
 import numpy as np
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
+
 from asta.dims import Placeholder
 
 _TORCH_IMPORTED = False
@@ -93,6 +95,17 @@ class ScalarMeta(type):
         return False
 
 
+class Printable:
+    """ Class for printing object representations in nested objects. """
+
+    def __init__(self, rep: str):
+        self.rep = rep
+
+    def __repr__(self) -> str:
+        """ Just return ``rep``. """
+        return self.rep
+
+
 class Color:
     """ Terminal color string literals. """
 
@@ -112,8 +125,8 @@ if not _TORCH_IMPORTED:
     torch = TorchModule()
     tf = TFModule()
 
-
 # Types.
+GenericArray = Union[np.ndarray, torch.Tensor, tf.Tensor]
 ARRAY_TYPES: List[type] = [np.ndarray, torch.Tensor, tf.Tensor]
 GENERIC_TYPES: List[type] = [
     bool,

@@ -6,7 +6,7 @@ from sympy.core.expr import Expr
 
 import asta.dims
 from asta.dims import Placeholder
-from asta.utils import shapecheck
+from asta.utils import shapecheck, attrcheck
 from asta.array import Array
 from asta._array import _ArrayMeta
 from asta.classes import SubscriptableMeta
@@ -156,8 +156,9 @@ def refresh(annotation: SubscriptableMeta) -> Tuple[SubscriptableMeta, bool]:
 def get_equations(
     equations: Set[Expr], annotation: SubscriptableMeta, arg: Any,
 ) -> Set[Expr]:
-    """ Computes subscript argument equations via a shapecheck call. """
-    annotation_equations: Set[Expr] = set()
+    """ Computes subscript argument equations via shapecheck/attrcheck calls. """
+    shape_equations: Set[Expr] = set()
+    attr_equations: Set[Expr] = set()
 
     if annotation.shape is not None:
 
@@ -167,10 +168,11 @@ def get_equations(
         assert not isinstance(arg_shape, torch.Size)
 
         # Grab equations from shapecheck call.
-        match, annotation_equations = shapecheck(arg_shape, annotation.shape)
-        assert match
+        shape_match, shape_equations = shapecheck(arg_shape, annotation.shape)
+        attr_match, attr_equations = attrcheck(arg, annotation.kwattrs)
+        assert shape_match and attr_match
 
-    equations = equations.union(annotation_equations)
+    equations = equations.union(shape_equations, attr_equations)
 
     return equations
 
