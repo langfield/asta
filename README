@@ -6,62 +6,73 @@ Shape annotations for numpy arrays and pytorch/tensorflow tensors.
 
 Usage
 -----
-This library defines two subscriptable classes, ``Array`` and ``Tensor``, whose
-purpose is to facilitate type and/or shape annotations of functions which take
-as argument(s) numpy ndarrays or pytorch tensors. It also adds a decorator,
-``@typechecked``, which implements toggleable static type enforcement for the
-classes described above.
+This library defines subscriptable classes ``Array``, ``Tensor``, and
+``TFTensor`` for use in ``isinstance()`` checks and type annotations.  It also
+adds a decorator, ``@typechecked``, which implements toggleable static type
+enforcement for the classes described above.
 
 Examples
 --------
-Asta supports checking dtypes and shapes:
+Asta supports checking dtypes and/or shapes with wildcards and ellipses:
 
->>> def fn(arr: Array[float, 1, 2, 3]):
->>>     pass
+>>> Array[float]                # dtype=np.float64.
+>>> Array[float, 1, 2, 3]       # dtype=np.float64, shape=(1,2,3).
+>>> Array[float, (1, 2, 3)]     # dtype=np.float64, shape=(1,2,3).
+>>> Array[1, 2, 3]              # shape=(1,2,3).
+>>> Array[int, ()]              # dtype=np.int64, shape=().
+>>> Array[str, 1, 2 ..., 3]     # dtype=unicode, shape=(1,2,*...*,3).
+>>> Array[str, 1, 2 -1, 3]      # dtype=unicode, shape=(1,2,*,3).
+>>> Tensor[torch.uint8, 1]      # dtype=torch.uint8, shape=(1,).
+>>> TFTensor[tf.complex128, ()] # dtype=tf.complex128, shape=().
 
-(Allows np.ndarrays with dtype ``np.float64`` and shape ``(1, 2, 3)``)
+Asta also supports variable shape arguments:
 
-Or dtypes only:
+>>> from asta import dims
+>>> BATCH_SIZE = dims.BATCH_SIZE
+>>> SEQ_LEN = dims.SEQ_LEN
+>>> OBS_SHAPE = dims.OBS_SHAPE
+>>> ...
+>>> dims.BATCH_SIZE = 32
+>>> dims.SEQ_LEN = 256
+>>> dims.OBS_SHAPE = (4, 5, 6)
+>>> ...
+>>> Tensor[float, BATCH_SIZE, SEQ_LEN]          # shape=(32,256).
+>>> Tensor[float, (BATCH_SIZE,) + OBS_SHAPE]    # shape=(32,4,5,6).
 
->>> def fn(arr: Array[float]):
->>>     pass
+These can be accessed from ``asta.dims`` for use in annotating top-level
+functions and then set after import-time during the execution of a program,
+allowing for shape annotations which depend on control flow or which change
+during execution:
 
-(Allows np.ndarrays with dtype ``np.float64``)
+(utils.py)
+>>> from asta import dims
+>>> HIDDEN_DIM = dims.HIDDEN_DIM
+>>> @typechecked
+>>> def identity(x: Tensor[float, HIDDEN_DIM]) -> Tensor[float, HIDDEN_DIM]:
+>>>     return x
+...
+(main.py)
+>>> from utils import example_fn
+>>> dims.HIDDEN_DIM = 768
+>>> x = torch.ones((768,))
+>>> y = identity(x)
 
-Or shapes only:
+Asta also supports arbitrary expressions of symbolic shape arguments:
 
->>> def fn(arr: Array[1, 2, 3]):
->>>     pass
+>>> from asta import symbols
+>>> X = symbols.X
+>>> Y = symbols.Y
+>>> Tensor[float, (X, X**2, X**3)]      # e.g. shape=(2,4,8) or shape=(1,1,1).
+>>> Tensor[float, (X + Y, (X + Y)**2)]  # Multivariate supported as well.
 
-(Allows np.ndarrays with shape ``(1, 2, 3)``)
-
-To specify scalar arrays/tensors, use ``()`` or ``Scalar``:
-
->>> def fn(arr: Array[int, ()]):
->>>     pass
-
-(Allows scalar np.ndarrays of type ``np.int64``)
-
-You can also pass ellipses and wildcard dimensions:
-
->>> def fn(arr: Array[str, 1, 2, ..., 3]):
->>>     pass
-
-(Allows unicode ``np.dtype("<U")`` np.ndarrays whose first two dimensions have
-size 1 and 2, and whose last dimension has size 3.)
-
->>> def fn(arr: Array[str, 1, 2, -1, 3]):
->>>     pass
-
-(Allows unicode ``np.dtype("<U")`` np.ndarrays with shape ``(1,2,*,3)``,
-where ``*`` can be any positive integer)
+Checks on the above objects will do inference based on the passed tensor,
+constructing a system of equations based on the actual shape and returning a
+match if there exists a unique solution.
 
 The following gives an example of using the ``@typechecked`` decorator to
 enforce torch tensor shapes and dtypes at runtime. The function ``kl`` will
 raise a TypeError if called with inputs which have any dtype other than
 ``torch.float32``, or any shape other than ``(8, 64)``.
-
-A runnable example is given in ``example.py`` in the repository root.
 
 >>> import os
 >>> import torch.nn.functional as F
@@ -71,10 +82,12 @@ A runnable example is given in ``example.py`` in the repository root.
 >>>
 >>>
 >>> @typechecked
->>> def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[float, ()]:
->>>     """ Computes the KL divergence of two FloatTensors of shape ``(8, 64)``. """
+>>> def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[()]:
+>>>     """ Computes the KL divergence of two Tensors of shape ``(8, 64)``. """
 >>>     divergence = F.kl_div(t_1, t_2, reduction="sum")
 >>>     return divergence
+
+A runnable example is given in ``example.py`` in the repository root.
 
 Subscript arguments
 -------------------
@@ -106,6 +119,10 @@ The valid subscript arguments for ``Array`` and ``Tensor`` are as follows:
             d. bytes
         2. Any ``torch.Tensor``-supported torch dtype, e.g. ``torch.int64``.
         3. Omitted (no argument passed).
+
+        TFTensor
+        --------
+        # TODO
 
     Shapes
     ------
@@ -298,7 +315,7 @@ Todo
   tensors. For example, if working on a reinforcement learning problem, and you
   wanted to make sure all tensors have the same timestep index, you could seta
   ``<torch.Tensor>.timestep: int`` attribute and then assert that they all
-  match at function call time.
+  match at function call time. (DONE)
 - This could have syntax like:
 
     >>> def product(
@@ -316,7 +333,7 @@ Todo
     >>> ) -> Tensor[float, 1,2,3]:
 
   This is much better because it doesn't break the convention of using
-  subscriptable objects for annotations.
+  subscriptable objects for annotations. (DONE)
 
 - This would also require an implementation of non-contant shapes/variables.
   For example, if you know all your tensors will have length ``k``, but ``k``
@@ -325,7 +342,18 @@ Todo
   inferred from the first argument checked which makes use of this variable.
   The typechecker will assert that all other instances of ``K`` have the same
   value as this initialized one, and if soft checking is enabled, it will print
-  out all of them along with an error message.
+  out all of them along with an error message. (DONE)
+
+- Rewrite README.
+- Add List, Sequence, Callable, Set, Dict.
+- Write tests for decorated classes, attributes, equation solver, placeholders,
+  instance/class/metaclass methods, and the above generic subscriptable types.
+- Resolve the discrepancy between default dtypes of tensors (float32 in TF),
+  and default dtype given the primitive float argument (float64). What is the
+  most natural behavior? Follow PLA.
+- In line with above, consider making checks for primitive types (int, float,
+  complex, bytes, str) less strict.
+- Put on PyPI.
 
 
 Acknowledgements
