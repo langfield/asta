@@ -7,7 +7,7 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 import torch
 import numpy as np
 
-from asta.utils import get_shape_rep, shapecheck
+from asta.utils import shapecheck, attrcheck
 from asta.parser import parse_subscript
 from asta.classes import SubscriptableMeta, GenericMeta
 from asta.constants import (
@@ -24,6 +24,7 @@ class _TensorMeta(SubscriptableMeta):
 
     shape: tuple
     dtype: torch.dtype
+    kwattrs: Dict[str, Any]
 
     @classmethod
     @abstractmethod
@@ -43,33 +44,11 @@ class _TensorMeta(SubscriptableMeta):
             return False
         return True
 
-    def __repr__(cls) -> str:
-        """ String representation of ``Tensor`` class. """
-        assert hasattr(cls, "shape")
-        assert hasattr(cls, "dtype")
-        shape = cls.shape
-
-        # Treat ``torch.Size`` objects.
-        if isinstance(shape, torch.Size):
-            shape = tuple(shape)
-
-        if shape is None and cls.dtype is None:
-            rep = f"<asta.Tensor>"
-        elif shape is None and cls.dtype is not None:
-            rep = f"<asta.Tensor[{cls.dtype}]>"
-        elif shape is not None and cls.dtype is None:
-            shape_rep = get_shape_rep(shape)
-            rep = f"<asta.Tensor[{shape_rep}]>"
-        else:
-            shape_rep = get_shape_rep(shape)
-            rep = f"<asta.Tensor[{cls.dtype}, {shape_rep}]>"
-
-        return rep
-
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<tensor>, Tensor[<args>])``. """
         assert hasattr(cls, "shape")
         assert hasattr(cls, "dtype")
+        assert hasattr(cls, "kwattrs")
         match = False
         if isinstance(inst, torch.Tensor):
             match = True  # In case of an empty tensor.
@@ -79,8 +58,10 @@ class _TensorMeta(SubscriptableMeta):
                 match = False
 
             # Handle ellipses.
-            elif cls.shape is not None:
-                match, _ = shapecheck(inst.shape, cls.shape)
+            else:
+                shape_match, _ = shapecheck(inst.shape, cls.shape)
+                attr_match, _ = attrcheck(inst, cls.kwattrs)
+                match = shape_match and attr_match
 
         return match
 
@@ -94,6 +75,7 @@ class _Tensor(metaclass=_TensorMeta):
 
     dtype: Optional[torch.dtype] = None
     shape: Optional[Tuple] = None
+    kwattrs: Optional[Dict[str, Any]] = None
 
     def __new__(cls, *args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         raise TypeError("Cannot instantiate abstract class 'Tensor'.")
@@ -131,6 +113,7 @@ class _Tensor(metaclass=_TensorMeta):
         cls, item: Union[type, Optional[Union[int, EllipsisType]]]  # type: ignore
     ) -> None:
         """ Set class attributes based on the passed dtype/dim data. """
-        dtype, shape, _ = parse_subscript(cls, item, torch.dtype)
+        dtype, shape, kwattrs, _ = parse_subscript(cls, item, torch.dtype)
         cls.dtype = dtype
         cls.shape = shape
+        cls.kwattrs = kwattrs
