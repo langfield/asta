@@ -345,6 +345,7 @@ Todo
   out all of them along with an error message. (DONE)
 
 - Rewrite README.
+- Fix source code headers.
 - Add List, Sequence, Callable, Set, Dict.
 - Write tests for decorated classes, attributes, equation solver, placeholders,
   instance/class/metaclass methods, and the above generic subscriptable types.
