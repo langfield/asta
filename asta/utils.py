@@ -233,7 +233,6 @@ def check_equal(
 
         if isinstance(x, Expr) and isinstance(y, Expr):
 
-            # TODO: Possibly substitute existing values here.
             if simplify(x - y) != 0:
                 return False, equations
             continue

@@ -166,8 +166,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
 
             # If we don't get a unique solution, it's not a match.
             if len(solutions) != 1:
-                halt = os.environ["ASTA_TYPECHECK"] == "2"
-                fail_system(equations, symbols, solutions, halt)
+                fail_system(equations, symbols, solutions)
 
         return ret
 

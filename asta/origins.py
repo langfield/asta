@@ -1,5 +1,4 @@
 """ Functions for checking type annotations and their origin types. """
-import os
 import inspect
 from typing import Any, Tuple, Set, Dict
 
@@ -17,6 +16,10 @@ from asta.display import (
     pass_return,
     fail_argument,
     fail_return,
+    fail_tuple,
+    fail_tuple_length,
+    fail_namedtuple,
+    fail_empty_tuple,
     fail_uninitialized,
 )
 from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
@@ -58,68 +61,52 @@ def check_tuple(
     # Specialized check for NamedTuples.
     if hasattr(annotation, "_field_types"):
         if not isinstance(value, annotation):
-            # TODO: Fail.
-            raise TypeError(
-                "type of {} must be a named tuple of type {}; got {} instead".format(
-                    name, qualified_name(annotation), qualified_name(value)
-                )
-            )
+            fail_namedtuple(name, qualified_name(annotation), qualified_name(value))
 
         # pylint: disable=protected-access
         for subname, field_type in annotation._field_types.items():
             equations = check_annotation(
                 f"{name}.{subname}", getattr(value, subname), field_type, equations
             )
-        return equations
 
-    if not isinstance(value, tuple):
-        # TODO: Fail.
-        raise TypeError(
-            f"type of {name} must be a tuple; got {qualified_name(value)} instead'"
-        )
-        # pylint: disable=unreachable
-        return equations
+    elif not isinstance(value, tuple):
+        fail_tuple(name, qualified_name(value))
 
-    if not getattr(annotation, "__args__", None):
+    elif not getattr(annotation, "__args__", None):
         # Unparametrized Tuple or plain tuple.
-        return equations
+        pass
 
-    # Python 3.6+
-    use_ellipsis = annotation.__args__[-1] is Ellipsis
-
-    # Remove the ``Ellipsis`` from the end if it exists.
-    if use_ellipsis:
-        tuple_params = annotation.__args__[:-1]
     else:
-        tuple_params = annotation.__args__
+        # Python 3.6+
+        use_ellipsis = annotation.__args__[-1] is Ellipsis
 
-    if use_ellipsis:
-        element_type = tuple_params[0]
-        for i, element in enumerate(value):
-            equations = check_annotation(
-                f"{name}[{i}]", element, element_type, equations
-            )
-    elif tuple_params == ((),):
-        if value != ():
-            raise TypeError(f"{name} is not an empty tuple but one was expected")
-    else:
-        if len(value) != len(tuple_params):
-            raise TypeError(
-                f"{name} has wrong number of elements "
-                + f"(expected {len(tuple_params)}, got {len(value)} instead)"
-            )
+        # Remove the ``Ellipsis`` from the end if it exists.
+        if use_ellipsis:
+            tuple_params = annotation.__args__[:-1]
+        else:
+            tuple_params = annotation.__args__
 
-        for i, (element, element_type) in enumerate(zip(value, tuple_params)):
-            equations = check_annotation(
-                f"{name}[{i}]", element, element_type, equations
-            )
+        if use_ellipsis:
+            element_type = tuple_params[0]
+            for i, element in enumerate(value):
+                equations = check_annotation(
+                    f"{name}[{i}]", element, element_type, equations
+                )
+        elif tuple_params == ((),):
+            if value != ():
+                fail_empty_tuple(name, qualified_name(value))
+        else:
+            if len(value) != len(tuple_params):
+                ann_rep = qualified_name(annotation)
+                fail_tuple_length(name, len(tuple_params), ann_rep, len(value))
+
+            for i, (elem, elem_type) in enumerate(zip(value, tuple_params)):
+                equations = check_annotation(f"{name}[{i}]", elem, elem_type, equations)
 
     return equations
 
 
-def refresh(
-    annotation: SubscriptableMeta, halt: bool
-) -> Tuple[SubscriptableMeta, bool]:
+def refresh(annotation: SubscriptableMeta) -> Tuple[SubscriptableMeta, bool]:
     """ Load an asta type annotation containing classical placeholders. """
     dtype = annotation.dtype
     shape = annotation.shape
@@ -140,7 +127,7 @@ def refresh(
                     initialized = False
                     name = placeholder.name
                     if name not in uninitialized_placeholder_names:
-                        fail_uninitialized(name, annotation, halt=halt)
+                        fail_uninitialized(name)
                     uninitialized_placeholder_names.add(name)
 
                 # Handle case where placeholder is unpacked in annotation.
@@ -199,7 +186,6 @@ def check_annotation(
     name: str, val: Any, annotation: Any, equations: Set[Expr]
 ) -> Set[Expr]:
     """ Check if ``val`` is of type ``annotation`` for asta types only. """
-    halt = os.environ["ASTA_TYPECHECK"] == "2"
 
     # The solution to the set of equations for each individual annotation
     # should be unique. If there is no solution, print/raise an error. If there
@@ -226,7 +212,7 @@ def check_annotation(
 
     # Only check if the annotation is an asta subscriptable class.
     if isinstance(annotation, SubscriptableMeta):
-        annotation, initialized = refresh(annotation, halt)
+        annotation, initialized = refresh(annotation)
         if not initialized:
             return equations
 
@@ -236,9 +222,8 @@ def check_annotation(
         identifier = "0" if name == "return" else name
 
         # If the isinstance check fails, print/raise an error.
-        # TODO: All the equation logic should be dumped into the isinstance methods.
         if not isinstance(val, annotation):
-            fail_fn(identifier, annotation, rep, halt)
+            fail_fn(identifier, annotation, rep)
 
         # Otherwise, print a pass.
         else:
