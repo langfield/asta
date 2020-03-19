@@ -4,6 +4,8 @@
 import tensorflow as tf
 from asta._tftensor import _TFTensor
 
+# pylint: disable=too-few-public-methods
+
 
 class TFTensor(_TFTensor, tf.Tensor):
     """

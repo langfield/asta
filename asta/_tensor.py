@@ -8,7 +8,6 @@ import torch
 import numpy as np
 
 from asta.utils import get_shape_rep, shapecheck
-from asta.scalar import Scalar
 from asta.parser import parse_subscript
 from asta.classes import SubscriptableMeta, GenericMeta
 from asta.constants import (
@@ -126,27 +125,6 @@ class _Tensor(metaclass=_TensorMeta):
             dtype = cls._TORCH_DTYPE_MAP[generic_type]
 
         return dtype, None
-
-    @staticmethod
-    def get_shape(item: Tuple) -> Optional[Tuple]:
-        """ Compute shape from a shape tuple argument. """
-        shape: Optional[Tuple] = None
-
-        if item:
-            if Scalar not in item and () not in item:
-                shape = item
-            elif item in [(Scalar,), ((),)]:
-                shape = ()
-            else:
-                none_err = "Too many 'None' arguments. "
-                none_err += "Use 'Array[None]' for scalar arrays."
-                raise TypeError(none_err)
-
-        # ``((1,2,3),)`` -> ``(1,2,3)``.
-        if isinstance(shape, tuple) and len(shape) == 1 and isinstance(shape[0], tuple):
-            shape = shape[0]
-
-        return shape
 
     @classmethod
     def _after_subscription(
