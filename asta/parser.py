@@ -41,7 +41,6 @@ def parse_subscript(
     shape: Optional[Tuple] = None
     kwattrs: Optional[Dict[str, Any]] = None
 
-    # TODO: Remove code duplication.
     if isinstance(item, (type, dtype_metaclass)) and item != Scalar:
         dtype, kind = cls.get_dtype(item)
         shape = None
@@ -59,7 +58,6 @@ def parse_subscript(
     # i.e. ``Array[1]`` or ``Array[...]``.
     elif not isinstance(item, tuple):
 
-        # TODO: Remove code duplication.
         verify_dimensions(cls, item)
         shape = (item,)
 
@@ -67,18 +65,15 @@ def parse_subscript(
     elif item:
 
         # Case where generic type is specified.
-        # TODO: Remove code duplication.
         if isinstance(item[0], (type, dtype_metaclass)) and item[0] != Scalar:
             dtype, kind = cls.get_dtype(item[0])
             item = item[1:]
 
-        # TODO: Remove code duplication.
         # Adding support for keyword attributes.
         if item and isinstance(item[-1], dict):
             kwattrs = item[-1]
             item = item[:-1]
 
-        # TODO: Remove code duplication.
         if item:
             verify_dimensions(cls, item)
             shape = SubscriptableMeta.get_shape(item)

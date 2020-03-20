@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """ Functions for checking type annotations and their origin types. """
 import inspect
-from typing import Any, Tuple, Set, Dict
+import collections
+from typing import Any, Tuple, Set, Dict, List
 
 from sympy.core.expr import Expr
 
@@ -23,6 +24,8 @@ from asta.display import (
     fail_namedtuple,
     fail_empty_tuple,
     fail_uninitialized,
+    fail_listtype,
+    fail_sequencetype,
 )
 from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
 
@@ -108,6 +111,51 @@ def check_tuple(
     return equations
 
 
+def check_list(
+    name: str, value: Any, annotation: Any, equations: Set[Expr]
+) -> Set[Expr]:
+    """ Check an argument with annotation ``list`` or ``List[]``. """
+    if not isinstance(value, list):
+        fail_listtype(name, annotation, qualified_name(value))
+
+    # If annotation is a subscriptable generic (``List[...]``).
+    if annotation is not list:
+        if annotation.__args__ not in (None, annotation.__parameters__):
+            value_type = annotation.__args__[0]
+            if value_type is not Any:
+
+                # TODO: Consider adding a configuration option to avoid
+                # checking the entire list, maybe just do the first and last
+                # elements, or an intelligent sample.
+                for i, v in enumerate(value):
+                    element_equations = check_annotation(
+                        f"{name}[{i}]", v, value_type, equations
+                    )
+                    equations = equations.union(element_equations)
+
+    return equations
+
+
+def check_sequence(
+    name: str, value: Any, annotation: Any, equations: Set[Expr]
+) -> Set[Expr]:
+    """ Check an argument with annotation ``Sequence[]``. """
+    if not isinstance(value, collections.abc.Sequence):
+        fail_sequencetype(name, annotation, qualified_name(value))
+
+    # Consider removing this test or even just figuring out what it does?
+    if annotation.__args__ not in (None, annotation.__parameters__):
+        value_type = annotation.__args__[0]
+        if value_type is not Any:
+            for i, v in enumerate(value):
+                element_equations = check_annotation(
+                    f"{name}[{i}]", v, value_type, equations
+                )
+                equations = equations.union(element_equations)
+
+    return equations
+
+
 def refresh(annotation: SubscriptableMeta) -> Tuple[SubscriptableMeta, bool]:
     """ Load an asta type annotation containing classical placeholders. """
     dtype = annotation.dtype
@@ -183,6 +231,8 @@ def get_equations(
 ORIGIN_TYPE_CHECKERS = {
     tuple: check_tuple,
     Tuple: check_tuple,
+    list: check_list,
+    List: check_list,
 }
 
 
