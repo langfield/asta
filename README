@@ -358,7 +358,7 @@ _ Add support for generics:
   and default dtype given the primitive float argument (float64). What is the
   most natural behavior? Follow PLA.
 - In line with above, consider making checks for primitive types (int, float,
-  complex, bytes, str) less strict.
+  complex, bytes, str) less strict. This should be done if there is time.
 - Put on PyPI.
 
 
