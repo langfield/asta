@@ -15,6 +15,7 @@ X = symbols.X
 
 # pylint: disable=invalid-name
 
+
 @typechecked
 def np_correct_type(arr: Array[int]) -> Array[int]:
     """ Test function. """

@@ -1,5 +1,6 @@
 """ Functions for checking type annotations and their origin types. """
 import inspect
+import collections
 from typing import Any, Tuple, Set, Dict, List
 
 from sympy.core.expr import Expr
@@ -22,6 +23,7 @@ from asta.display import (
     fail_empty_tuple,
     fail_uninitialized,
     fail_listtype,
+    fail_sequencetype,
 )
 from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
 
@@ -128,6 +130,26 @@ def check_list(
                         f"{name}[{i}]", v, value_type, equations
                     )
                     equations = equations.union(element_equations)
+
+    return equations
+
+
+def check_sequence(
+    name: str, value: Any, annotation: Any, equations: Set[Expr]
+) -> Set[Expr]:
+    """ Check an argument with annotation ``Sequence[]``. """
+    if not isinstance(value, collections.abc.Sequence):
+        fail_sequencetype(name, annotation, qualified_name(value))
+
+    # Consider removing this test or even just figuring out what it does?
+    if annotation.__args__ not in (None, annotation.__parameters__):
+        value_type = annotation.__args__[0]
+        if value_type is not Any:
+            for i, v in enumerate(value):
+                element_equations = check_annotation(
+                    f"{name}[{i}]", v, value_type, equations
+                )
+                equations = equations.union(element_equations)
 
     return equations
 
