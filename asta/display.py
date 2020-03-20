@@ -106,6 +106,13 @@ def fail_namedtuple(name: str, ann_rep: str, rep: str) -> None:
     handle_error(err)
 
 
+def fail_listtype(name: str, ann: Any, rep: str) -> None:
+    """ Print/raise error when NamedTuple fails isinstance check. """
+    err = f"{FAIL}: Argument '{name}' must be a list. Expected type: '{ann}' "
+    err += f"Actual type: '{rep}'"
+    handle_error(err)
+
+
 def fail_system(
     equations: Set[Expr], symbols: Set[Symbol], solutions: List[Dict[Symbol, int]],
 ) -> None:

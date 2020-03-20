@@ -1,13 +1,19 @@
 # type: ignore
 """ Test the ``asta.typechecked`` decorator. """
 import os
+import functools
+from typing import List, Tuple
+
 import torch
 import pytest
 import numpy as np
-from asta import Array, Tensor, typechecked
+from asta import Array, Tensor, typechecked, symbols
 
 os.environ["ASTA_TYPECHECK"] = "2"
 
+X = symbols.X
+
+# pylint: disable=invalid-name
 
 @typechecked
 def np_correct_type(arr: Array[int]) -> Array[int]:
@@ -129,6 +135,31 @@ def torch_nones_return(t: Tensor[int]) -> Tensor[None, None]:
     return t
 
 
+@typechecked
+def list_generic(l: List[Tensor[float, 1, 2, 3]]) -> Tensor[float, 1, 2, 3]:
+    """ Test function. """
+    t = functools.reduce(lambda x, y: x * y, l)
+    return t
+
+
+@typechecked
+def tuple_generic(
+    tup: Tuple[Tensor[float, 8, 32], Tensor[float, 8, 64]]
+) -> Tuple[Tensor[float, 8, 32], Tensor[float, 8, 96]]:
+    """ Test function. """
+    a, b = tup
+    return a, torch.cat((a, b), dim=1)
+
+
+@typechecked
+def tuple_generic_inference(
+    tup: Tuple[Tensor[float, 8, X], Tensor[float, 8, 2 * X]]
+) -> Tuple[Tensor[float, 8, X], Tensor[float, 8, 3 * X]]:
+    """ Test function. """
+    a, b = tup
+    return a, torch.cat((a, b), dim=1)
+
+
 def test_np_typechecked():
     """ Test that decorator raises a TypeError when argument is wrong. """
     arr = np.zeros((1, 1))
@@ -175,3 +206,19 @@ def test_torch_typechecked():
         torch_nones(t)
     with pytest.raises(TypeError):
         torch_nones_return(t)
+
+
+def test_subscriptable_generics():
+    """ Test that subscriptable generic are typechecked properly. """
+    good_list = [torch.ones((1, 2, 3))] * 5
+    bad_list = ([torch.ones((1, 2, 3))] * 5) + [torch.ones((1, 2, 2))]
+    good_tuple = (torch.ones((8, 32)), torch.ones((8, 64)))
+    bad_tuple = (torch.ones((16, 32)), torch.ones((16, 64)))
+    bigger_tuple = (torch.ones((8, 74)), torch.ones((8, 148)))
+    list_generic(good_list)
+    with pytest.raises(TypeError):
+        list_generic(bad_list)
+    tuple_generic(good_tuple)
+    tuple_generic_inference(bigger_tuple)
+    with pytest.raises(TypeError):
+        tuple_generic(bad_tuple)
