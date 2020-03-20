@@ -147,14 +147,12 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
             equations = check_annotation(name, arg, annotation, equations)
         del annotation
 
-        # TODO: Treat lists, sequences recursively.
         # Check return.
         ret = decorated(*args, **kwargs)
         annotation = annotations["return"]
         equations = check_annotation("return", ret, annotation, equations)
         del annotation
 
-        # TODO: Consider putting this in its own function.
         # Solve our system of equations if it is nonempty.
         if equations:
             symbols: Set[Symbol] = set()

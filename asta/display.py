@@ -107,8 +107,15 @@ def fail_namedtuple(name: str, ann_rep: str, rep: str) -> None:
 
 
 def fail_listtype(name: str, ann: Any, rep: str) -> None:
-    """ Print/raise error when NamedTuple fails isinstance check. """
+    """ Print/raise error when List fails isinstance check. """
     err = f"{FAIL}: Argument '{name}' must be a list. Expected type: '{ann}' "
+    err += f"Actual type: '{rep}'"
+    handle_error(err)
+
+
+def fail_sequencetype(name: str, ann: Any, rep: str) -> None:
+    """ Print/raise error when collections.abc.Sequence fails isinstance check. """
+    err = f"{FAIL}: Argument '{name}' must be a sequence. Expected type: '{ann}' "
     err += f"Actual type: '{rep}'"
     handle_error(err)
 
