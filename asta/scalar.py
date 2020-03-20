@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Scalar type class. """
 from typing import List
 from asta.constants import GENERIC_TYPES, ARRAY_TYPES, ScalarMeta

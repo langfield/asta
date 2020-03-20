@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # type: ignore
 """ Test the ``asta.typechecked`` decorator. """
 import os

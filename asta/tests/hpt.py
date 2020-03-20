@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Custom hypothesis test strategies for torch tensors. """
 from typing import Any, Callable, List, Tuple, Dict, Optional, Union
 

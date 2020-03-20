@@ -1,4 +1,6 @@
-""" asta.constants """
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Constants and helper classes for asta types. """
 import datetime
 from typing import Dict, List, Union, Any
 

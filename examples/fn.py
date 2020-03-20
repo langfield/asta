@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Example function for shapechecking. """
 from typing import Tuple
 import torch

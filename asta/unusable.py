@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Dummy classes for use when ``torch`` or ``tensorflow`` are not installed. """
 from typing import Any
 from abc import abstractmethod

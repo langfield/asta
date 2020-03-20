@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 Simple check list from AllenNLP repo:
 https://github.com/allenai/allennlp/blob/master/setup.py
