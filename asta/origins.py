@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Functions for checking type annotations and their origin types. """
 import inspect
 from typing import Any, Tuple, Set, Dict

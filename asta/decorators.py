@@ -1,8 +1,6 @@
-"""
-PRIVATE MODULE: do not import (from) it directly.
-
-This module contains decorators.
-"""
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Defines the ``@typechecked`` decorator. """
 import os
 import inspect
 from typing import Any, Tuple, Dict, Set, List

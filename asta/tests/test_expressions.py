@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # type: ignore
-""" Tests for the 'Array' typing class. """
+""" Tests for shape inference support via sympy's equation solver. """
 import numpy as np
 
 from asta import Array, symbols

@@ -1,4 +1,6 @@
-""" Custom hypothesis test strategies for tf tensors. """
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Custom hypothesis test strategies for TensorFlow tensors. """
 from typing import Any, Callable, List, Tuple, Dict, Optional, Union
 
 import numpy as np

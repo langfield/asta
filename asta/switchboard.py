@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ A switchboard for importing asta modules with large dependencies. """
 # pylint: disable=unused-import, reimported, invalid-name
 from asta.unusable import Tensor, TFTensor

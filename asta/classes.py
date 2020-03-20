@@ -1,8 +1,6 @@
-"""
-PRIVATE MODULE: do not import (from) it directly.
-
-This module contains class implementations.
-"""
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Supermetaclasses for ``_Array``-like asta types. """
 import types
 from abc import abstractmethod
 from typing import TypeVar, Generic, Any, Optional, Tuple, List, Dict

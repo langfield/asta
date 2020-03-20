@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Example script for testing typecheck toggling. """
 import torch
 from asta import dims, symbols
