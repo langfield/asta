@@ -162,8 +162,8 @@ TORCH_DTYPE_MAP: Dict[type, torch.dtype] = {
     bytes: torch.uint8,
 }
 TF_DTYPE_MAP: Dict[type, tf.dtypes.DType] = {
-    int: tf.int64,
-    float: tf.float64,
+    int: tf.int32,
+    float: tf.float32,
     complex: tf.complex128,
     bool: tf.bool,
     bytes: tf.string,
