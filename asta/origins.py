@@ -3,7 +3,19 @@
 """ Functions for checking type annotations and their origin types. """
 import inspect
 import collections
-from typing import Any, Tuple, Set, Dict, List
+from typing import (
+    Any,
+    Tuple,
+    Set,
+    Dict,
+    List,
+    AbstractSet,
+    Callable,
+    Union,
+    IO,
+    TypeVar,
+    Sequence,
+)
 
 from sympy.core.expr import Expr
 
@@ -24,8 +36,10 @@ from asta.display import (
     fail_namedtuple,
     fail_empty_tuple,
     fail_uninitialized,
-    fail_listtype,
-    fail_sequencetype,
+    fail_list,
+    fail_sequence,
+    fail_dict,
+    fail_set,
 )
 from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
 
@@ -116,7 +130,7 @@ def check_list(
 ) -> Set[Expr]:
     """ Check an argument with annotation ``list`` or ``List[]``. """
     if not isinstance(value, list):
-        fail_listtype(name, annotation, qualified_name(value))
+        fail_list(name, annotation, qualified_name(value))
 
     # If annotation is a subscriptable generic (``List[...]``).
     if annotation is not list:
@@ -139,19 +153,67 @@ def check_list(
 def check_sequence(
     name: str, value: Any, annotation: Any, equations: Set[Expr]
 ) -> Set[Expr]:
-    """ Check an argument with annotation ``Sequence[]``. """
+    """ Check an argument with annotation ``Sequence[*]``. """
     if not isinstance(value, collections.abc.Sequence):
-        fail_sequencetype(name, annotation, qualified_name(value))
+        fail_sequence(name, annotation, qualified_name(value))
 
     # Consider removing this test or even just figuring out what it does?
     if annotation.__args__ not in (None, annotation.__parameters__):
         value_type = annotation.__args__[0]
         if value_type is not Any:
+
+            # TODO: Consider not iterating over entire sequence.
             for i, v in enumerate(value):
                 element_equations = check_annotation(
                     f"{name}[{i}]", v, value_type, equations
                 )
                 equations = equations.union(element_equations)
+
+    return equations
+
+
+def check_dict(
+    name: str, value: Any, annotation: Any, equations: Set[Expr]
+) -> Set[Expr]:
+    """ Check an argument with annotation ``Dict[*]``. """
+    if not isinstance(value, dict):
+        fail_dict(name, annotation, qualified_name(value))
+
+    # Equivalently: if annotation is ``Dict[*]``.
+    if annotation is not dict:
+        if annotation.__args__ not in (None, annotation.__parameters__):
+            key_type, value_type = annotation.__args__
+            if key_type is not Any or value_type is not Any:
+                for k, v in value.items():
+                    key_equations = check_annotation(
+                        f"{name}.<key>", k, key_type, equations
+                    )
+                    val_equations = check_annotation(
+                        f"{name}[{k}]", v, value_type, equations
+                    )
+
+                    equations = equations.union(key_equations, val_equations)
+
+    return equations
+
+
+def check_set(
+    name: str, value: Any, annotation: Any, equations: Set[Expr]
+) -> Set[Expr]:
+    """ Check an argument with annotation ``Set[*]``. """
+    if not isinstance(value, AbstractSet):
+        fail_set(name, annotation, qualified_name(value))
+
+    # Equivalently: if annotation is ``Set[*]``.
+    if annotation is not set:
+        if annotation.__args__ not in (None, annotation.__parameters__):
+            value_type = annotation.__args__[0]
+            if value_type is not Any:
+                for v in value:
+                    set_equations = check_annotation(
+                        f"{name}.<set_element>", v, value_type, equations
+                    )
+                    equations = equations.union(set_equations)
 
     return equations
 
@@ -229,17 +291,25 @@ def get_equations(
 
 # Equality checks are applied to these.
 ORIGIN_TYPE_CHECKERS = {
-    tuple: check_tuple,
-    Tuple: check_tuple,
+    AbstractSet: check_set,
+    dict: check_dict,
+    Dict: check_dict,
     list: check_list,
     List: check_list,
+    Sequence: check_sequence,
+    collections.abc.Sequence: check_sequence,
+    collections.abc.Set: check_set,
+    set: check_set,
+    Set: check_set,
+    tuple: check_tuple,
+    Tuple: check_tuple,
 }
 
 
 def check_annotation(
-    name: str, val: Any, annotation: Any, equations: Set[Expr]
+    name: str, value: Any, annotation: Any, equations: Set[Expr]
 ) -> Set[Expr]:
-    """ Check if ``val`` is of type ``annotation`` for asta types only. """
+    """ Check if ``value`` is of type ``annotation`` for asta types only. """
 
     # The solution to the set of equations for each individual annotation
     # should be unique. If there is no solution, print/raise an error. If there
@@ -263,20 +333,22 @@ def check_annotation(
 
     # Get origin type.
     origin: Any = getattr(annotation, "__origin__", None)
+    _subclass_check_unions = hasattr(Union, "__union_set_params__")
 
     # Only check if the annotation is an asta subscriptable class.
+    # TODO: Consider moving this into a ``check_asta`` function.
     if isinstance(annotation, SubscriptableMeta):
         annotation, initialized = refresh(annotation)
         if not initialized:
             return equations
 
-        # Check if the literal ``val`` matches the annotation.
-        rep: str = type_representation(val)
+        # Check if the literal ``value`` matches the annotation.
+        rep: str = type_representation(value)
         # HARDCODE
         identifier = "0" if name == "return" else name
 
         # If the isinstance check fails, print/raise an error.
-        if not isinstance(val, annotation):
+        if not isinstance(value, annotation):
             fail_fn(identifier, annotation, rep)
 
         # Otherwise, print a pass.
@@ -284,13 +356,57 @@ def check_annotation(
             pass_fn(identifier, annotation, rep)
 
             # Update variable dimension map.
-            equations = get_equations(equations, annotation, val)
+            equations = get_equations(equations, annotation, value)
 
     elif origin is not None:
         checker_fn = ORIGIN_TYPE_CHECKERS[origin]
         if checker_fn:
-            equations = checker_fn(name, val, annotation, equations)
+            equations = checker_fn(name, value, annotation, equations)
         else:
-            equations = check_annotation(name, val, origin, equations)
+            equations = check_annotation(name, value, origin, equations)
+    elif inspect.isclass(annotation):
+
+        subclass_callable: bool = issubclass(annotation, Callable)  # type: ignore
+        subclass_union: bool = issubclass(annotation, Union)  # type: ignore
+        has_args: bool = hasattr(annotation, "__args__")
+
+        if issubclass(annotation, Tuple):  # type: ignore[arg-type]
+            # TODO: Merge equations.
+            check_tuple(name, value, annotation, equations)
+        elif subclass_callable and has_args:
+            # Needed on Python 3.5.0 to 3.5.2
+            # check_callable(name, value, annotation, memo)
+            pass
+        elif issubclass(annotation, (float, complex)):
+            # check_number(name, value, annotation)
+            pass
+        elif _subclass_check_unions and subclass_union:
+            # check_union(name, value, annotation, memo)
+            pass
+        elif isinstance(annotation, TypeVar):  # type: ignore[arg-type]
+            # check_typevar(name, value, annotation, memo)
+            pass
+        elif issubclass(annotation, IO):
+            # check_io(name, value, annotation)
+            pass
+        elif issubclass(annotation, dict) and hasattr(annotation, "__annotations__"):
+            # check_typed_dict(name, value, annotation, memo)
+            pass
+        elif getattr(annotation, "_is_protocol", False):
+            # check_protocol(name, value, annotation)
+            pass
+        else:
+            annotation = getattr(annotation, "__extra__", None) or origin or annotation
+
+            if annotation is bytes:
+                # As per https://github.com/python/typing/issues/552
+                annotation = (bytearray, bytes)
+
+            if not isinstance(value, annotation):
+                """
+                raise TypeError(
+                    'type of {} must be {}; got {} instead'.
+                    format(name, qualified_name(annotation), qualified_name(value)))
+                """
 
     return equations

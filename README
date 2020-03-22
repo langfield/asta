@@ -349,8 +349,8 @@ Todo
 _ Add support for generics:
     - List (DONE)
     _ Sequence (DONE)
-    - Dict
-    - Set
+    - Dict (DONE)
+    - Set (DONE)
     - Callable
 - Write tests for decorated classes, attributes, equation solver, placeholders,
   instance/class/metaclass methods, and the above generic subscriptable types.
@@ -364,6 +364,7 @@ _ Add support for generics:
 
 Acknowledgements
 ----------------
-- Based on the excellent 'nptyping' package by Ramon Hagenaars.
+- Based on the excellent packages 'nptyping' by Ramon Hagenaars and 'typeguard'
+  by Alex Grönholm.
 - Thanks to Michael Crawshaw (@mtcrawshaw) for helpful comments on natural
   shape constraints and handling of 0-valued dimension sizes.
