@@ -52,8 +52,8 @@ def test_tensor_passes_ints() -> None:
     int64 = tf.ones((1, 1), dtype=tf.int64)
     assert not isinstance(int8, TFTensor[int])
     assert not isinstance(int16, TFTensor[int])
-    assert not isinstance(int32, TFTensor[int])
-    assert isinstance(int64, TFTensor[int])
+    assert isinstance(int32, TFTensor[int])
+    assert not isinstance(int64, TFTensor[int])
 
 
 def test_tensor_fails_nones() -> None:
