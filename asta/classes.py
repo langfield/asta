@@ -6,11 +6,12 @@ from abc import abstractmethod
 from typing import TypeVar, Generic, Any, Optional, Tuple, List, Dict
 
 import numpy as np
+from oxentiel import Oxentiel
+
 from asta.utils import shape_repr
 from asta.config import get_ox
 from asta.scalar import Scalar
 from asta.constants import Printable
-from oxentiel import Oxentiel
 
 # pylint: disable=too-few-public-methods
 

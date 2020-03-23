@@ -372,7 +372,7 @@ def check_annotation(
 
         if issubclass(annotation, Tuple):  # type: ignore[arg-type]
             # TODO: Merge equations.
-            check_tuple(name, value, annotation, equations)
+            tuple_equations = check_tuple(name, value, annotation, equations)
         elif subclass_callable and has_args:
             # Needed on Python 3.5.0 to 3.5.2
             # check_callable(name, value, annotation, memo)
@@ -403,6 +403,7 @@ def check_annotation(
                 annotation = (bytearray, bytes)
 
             if not isinstance(value, annotation):
+                # TODO: Write fallback fail function.
                 """
                 raise TypeError(
                     'type of {} must be {}; got {} instead'.

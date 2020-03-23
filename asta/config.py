@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 """ Configuration parsing and loading (credit to pylint authors). """
 import os
+import io
 import collections
 import configparser
-from typing import Generator, Optional, Dict
+from typing import Generator, Optional, Dict, Any
 
 import toml
-from asta import _internal
 from oxentiel import Oxentiel
+
+from asta import _internal
 
 
 def _toml_has_config(path: str) -> bool:
@@ -68,45 +70,40 @@ def find_default_config_files() -> Generator[str, None, None]:
 
 
 def find_astarc() -> Optional[str]:
-    """search the asta rc file and return its path if it find it, else None
-    """
+    """ Look for an ``astarc`` file. Return it if found, else return ``None``. """
     for config_file in find_default_config_files():
         if config_file.endswith("astarc"):
             return config_file
-
     return None
 
 
-def sample_read():
-    """
-    use_config_file = config_file and os.path.exists(config_file)
-    if use_config_file:
-        parser = self.cfgfile_parser
+# pylint: disable=protected-access
+def read_config(config_path: str) -> configparser.ConfigParser:
+    """ Parse a config file from ``config_path``, given a file exists there. """
+    parser = configparser.ConfigParser()
+    if config_path.endswith(".toml"):
+        with open(config_path, "r") as toml_file:
+            content = toml.load(toml_file)
 
-        if config_file.endswith(".toml"):
-            with open(config_file, "r") as fp:
-                content = toml.load(fp)
-
-            try:
-                sections_values = content["tool"]["pylint"]
-            except KeyError:
-                pass
-            else:
-                for section, values in sections_values.items():
-                    parser._sections[section.upper()] = values
+        try:
+            sections_values = content["tool"]["asta"]
+        except KeyError:
+            pass
         else:
-            # Use this encoding in order to strip the BOM marker, if any.
-            with io.open(config_file, "r", encoding="utf_8_sig") as fp:
-                parser.read_file(fp)
+            for section, values in sections_values.items():
+                parser._sections[section.upper()] = values  # type: ignore[attr-defined]
+    else:
+        # Use this encoding in order to strip the BOM marker, if any.
+        with io.open(config_path, "r", encoding="utf_8_sig") as config_file:
+            parser.read_file(config_file)
 
-            # normalize sections'title
-            for sect, values in list(parser._sections.items()):
-                if sect.startswith("pylint."):
-                    sect = sect[len("pylint.") :]
-                if not sect.isupper() and values:
-                    parser._sections[sect.upper()] = values
-    """
-    raise NotImplementedError
+        # Normalize sections' titles.
+        for sect, values in list(parser._sections.items()):  # type: ignore
+            if sect.startswith("asta."):
+                sect = sect[len("asta.") :]
+            if not sect.isupper() and values:
+                parser._sections[sect.upper()] = values  # type: ignore[attr-defined]
+    return parser
 
 
 def as_dict(config: configparser.ConfigParser) -> Dict[str, Dict[str, str]]:
@@ -125,22 +122,38 @@ def get_ox() -> Oxentiel:
     if not ox:
         print("GETTING CONFIG.")
         path = find_astarc()
-        if path:
+        parse = path and os.path.exists(path)
+        if parse and path:
             parser = configparser.ConfigParser()
-            parser.read(path)
-            settings = as_dict(parser)["MASTER"]
-            # TODO: Treat toml and setup.cfg.
+            parser = read_config(path)
+            if "MASTER" in parser:
+                settings = as_dict(parser)["MASTER"]
+            else:
+                settings = collections.OrderedDict()
         else:
             settings = collections.OrderedDict()
 
+        # Read defaults.
+        asta_dir = os.path.dirname(os.path.realpath(__file__))
+        default_path = os.path.join(asta_dir, "defaults/astarc")
+        assert os.path.isfile(default_path)
+        defaultparser = configparser.ConfigParser()
+        defaultparser = read_config(default_path)
+        assert "MASTER" in defaultparser
+        defaults = as_dict(defaultparser)["MASTER"]
+
         # Set defaults.
-        defaults = collections.OrderedDict()
-        defaults["on"] = "no"
-        defaults["raise-errors"] = "yes"
-        defaults["print-passes"] = "yes"
         for key, val in defaults.items():
             if key not in settings:
                 settings[key] = val
+
+        new_settings = collections.OrderedDict()
+        for key, val in settings.items():
+            new_val: Any = val
+            if val in ("yes", "no"):
+                new_val = True if val == "yes" else "no"
+            new_settings[key.replace("-", "_")] = new_val
+        settings = new_settings
 
         ox = Oxentiel(settings)
         _internal.ox = ox
