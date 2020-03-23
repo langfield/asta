@@ -360,6 +360,20 @@ _ Add support for generics:
 - In line with above, consider making checks for primitive types (int, float,
   complex, bytes, str) less strict. This should be done if there is time.
 - Put on PyPI.
+- Bug: disabling/enabling asta per-file is likely broken, since importing check
+  sets the value of an environment variable, which is global during python
+  execution.
+- Consider adding ``asta.shp`` and ``asta.dims`` so that integer and tuple
+  dimensions/shapes are in two separate storage modules. This would also mean
+  you could write ``shp.OBS`` intead of ``OBS_SHAPE`` or ``dims.OBS_SHAPE``,
+  which are both rather long and take up a good chunk of the hint size.
+- Decide on whether the storage modules should be plural (shp, dim, symbol) or
+  (shps, dims, symbols)? Singular is shorter and looks nicer, maybe?
+- Placeholder should support addition as tuple concatenation. Does this already
+  work?
+- Placeholders dims (scalars) should support arbitrary mathematical expressions
+  involving symbols.
+- Add configuration parsing.
 
 
 Acknowledgements
