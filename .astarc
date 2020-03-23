@@ -1,0 +1,14 @@
+[MASTER]
+
+on=yes
+raise-errors=yes
+print-passes=yes
+
+#default-np-float-precision=64
+#default-np-int-precision=64
+
+#default-torch-float-precision=32
+#default-torch-int-precision=32
+
+#default-tf-float-precision=32
+#default-tf-int-precision=32
