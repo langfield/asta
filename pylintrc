@@ -279,6 +279,7 @@ good-names=i,
            eq,
            t,
            on,
+           ox,
 
 # Include a hint for the correct naming format with invalid-name.
 include-naming-hint=no
