@@ -356,9 +356,9 @@ _ Add support for generics:
   instance/class/metaclass methods, and the above generic subscriptable types.
 - Resolve the discrepancy between default dtypes of tensors (float32 in TF),
   and default dtype given the primitive float argument (float64). What is the
-  most natural behavior? Follow PLA.
+  most natural behavior? Follow PLA. (DONE)
 - In line with above, consider making checks for primitive types (int, float,
-  complex, bytes, str) less strict. This should be done if there is time.
+  complex, bytes, str) less strict. This should be done if there is time. (NO)
 - Put on PyPI.
 - Bug: disabling/enabling asta per-file is likely broken, since importing check
   sets the value of an environment variable, which is global during python
@@ -374,6 +374,10 @@ _ Add support for generics:
 - Placeholders dims (scalars) should support arbitrary mathematical expressions
   involving symbols.
 - Add configuration parsing.
+- Consider just not implementing per-module typecheck enable/disable. It should
+  be all or nothing via either the configuration file option or the environment
+  variable.
+- Don't support default precisions because it decreases type transparency.
 
 
 Acknowledgements
