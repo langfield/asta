@@ -72,3 +72,35 @@ def find_astarc() -> Optional[str]:
             return config_file
 
     return None
+
+
+def sample_read():
+    """
+    use_config_file = config_file and os.path.exists(config_file)
+    if use_config_file:
+        parser = self.cfgfile_parser
+
+        if config_file.endswith(".toml"):
+            with open(config_file, "r") as fp:
+                content = toml.load(fp)
+
+            try:
+                sections_values = content["tool"]["pylint"]
+            except KeyError:
+                pass
+            else:
+                for section, values in sections_values.items():
+                    parser._sections[section.upper()] = values
+        else:
+            # Use this encoding in order to strip the BOM marker, if any.
+            with io.open(config_file, "r", encoding="utf_8_sig") as fp:
+                parser.read_file(fp)
+
+            # normalize sections'title
+            for sect, values in list(parser._sections.items()):
+                if sect.startswith("pylint."):
+                    sect = sect[len("pylint.") :]
+                if not sect.isupper() and values:
+                    parser._sections[sect.upper()] = values
+    """
+    raise NotImplementedError
