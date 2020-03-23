@@ -7,8 +7,10 @@ from typing import TypeVar, Generic, Any, Optional, Tuple, List, Dict
 
 import numpy as np
 from asta.utils import shape_repr
+from asta.config import get_ox
 from asta.scalar import Scalar
 from asta.constants import Printable
+from oxentiel import Oxentiel
 
 # pylint: disable=too-few-public-methods
 
@@ -45,6 +47,7 @@ class SubscriptableMeta(GenericMeta):
 
     DIM_TYPES: List[type]
     NAME: str
+    OX: Oxentiel
 
     __args__: Any
     __origin__: Any
@@ -53,6 +56,12 @@ class SubscriptableMeta(GenericMeta):
         cls._hash = 0
         cls.__args__ = None
         cls.__origin__ = None
+
+    def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
+        """ Initializes the configuration object if it doesn't already exist. """
+        super().__init__(name, bases, attrs)
+        ox = get_ox()
+        cls.OX = ox
 
     @classmethod
     @abstractmethod

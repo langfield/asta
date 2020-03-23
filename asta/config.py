@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 """ Configuration parsing and loading (credit to pylint authors). """
 import os
+import collections
 import configparser
-from typing import Generator, Optional
+from typing import Generator, Optional, Dict
 
 import toml
+from asta import _internal
+from oxentiel import Oxentiel
 
 
 def _toml_has_config(path: str) -> bool:
@@ -104,3 +107,41 @@ def sample_read():
                     parser._sections[sect.upper()] = values
     """
     raise NotImplementedError
+
+
+def as_dict(config: configparser.ConfigParser) -> Dict[str, Dict[str, str]]:
+    """ Returns a ``ConfigParser`` object as a dictionary. """
+    dictionary: Dict[str, Dict[str, str]] = collections.OrderedDict()
+    for section in config.sections():
+        dictionary[section] = {}
+        for key, val in config.items(section):
+            dictionary[section][key] = val
+    return dictionary
+
+
+def get_ox() -> Oxentiel:
+    """ Returns a configuration file. """
+    ox = _internal.ox
+    if not ox:
+        print("GETTING CONFIG.")
+        path = find_astarc()
+        if path:
+            parser = configparser.ConfigParser()
+            parser.read(path)
+            settings = as_dict(parser)["MASTER"]
+            # TODO: Treat toml and setup.cfg.
+        else:
+            settings = collections.OrderedDict()
+
+        # Set defaults.
+        defaults = collections.OrderedDict()
+        defaults["on"] = "no"
+        defaults["raise-errors"] = "yes"
+        defaults["print-passes"] = "yes"
+        for key, val in defaults.items():
+            if key not in settings:
+                settings[key] = val
+
+        ox = Oxentiel(settings)
+        _internal.ox = ox
+    return ox
