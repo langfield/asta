@@ -278,7 +278,7 @@ Todo
     >>>     return True
 
   The above constraint would only pass for shapes ``(n, 2n, 4n, 8n...)``.
-  To enforce it, you would use ``Array[fn]``.
+  To enforce it, you would use ``Array[fn]``. (NO)
 - Consider allowing instantiation to support kwargs. (DETAILED BELOW)
 - Consider adding a delimiter in the typecheck decorator output to distinguish
   the typecheck passes between different functions and signatures. Something
@@ -362,7 +362,7 @@ _ Add support for generics:
 - Put on PyPI.
 - Bug: disabling/enabling asta per-file is likely broken, since importing check
   sets the value of an environment variable, which is global during python
-  execution.
+  execution. (DONE)
 - Consider adding ``asta.shp`` and ``asta.dims`` so that integer and tuple
   dimensions/shapes are in two separate storage modules. This would also mean
   you could write ``shp.OBS`` intead of ``OBS_SHAPE`` or ``dims.OBS_SHAPE``,
@@ -373,11 +373,34 @@ _ Add support for generics:
   work?
 - Placeholders dims (scalars) should support arbitrary mathematical expressions
   involving symbols.
-- Add configuration parsing.
+- Add configuration parsing. (DONE)
 - Consider just not implementing per-module typecheck enable/disable. It should
   be all or nothing via either the configuration file option or the environment
   variable.
+- Consider implementing per-module disable via a global variable in each
+  module. The decorators can see the scope of the module from which they are
+  called, and these scopes are independent, so set ``ASTA_MODULE_DISABLE =
+  True``and asta will skip checking that module.
 - Don't support default precisions because it decreases type transparency.
+  (DONE)
+- Support subcriptable aliases:
+
+    >>> CudaTensor = Tensor[{"device": "cuda:0"}]
+    >>> FloatCudaTensor = CudaTensor[float]
+
+  Currently, subscripting ``CudaTensor`` as above will overwrite/delete the
+  existing subscript. So just add a class attribute that saves the subscript,
+  and upon subscription, combines the previous subscript with the new
+  subscript, raising an error if an attribute is already set. Actually, on
+  second though, instead of saving the subscript, just save the parsed class
+  attributes. (DONE)
+- Consider making overwrites of class attributes like:
+
+    >>> Tensor[float][float]
+
+  raise an error saying the attribute has already been defined. Perhaps
+  ``kwattrs`` allows overwriting as long as there are no keys in common or
+  something. Is an error expected behavior, or should we be lenient?
 
 
 Acknowledgements

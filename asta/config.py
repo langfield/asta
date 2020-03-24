@@ -123,7 +123,6 @@ def get_ox() -> Oxentiel:
         path = find_astarc()
         parse = path and os.path.exists(path)
         if parse and path:
-            print("Found config at: '%s'" % path)
             parser = configparser.ConfigParser()
             parser = read_config(path)
             if "MASTER" in parser:
@@ -132,7 +131,6 @@ def get_ox() -> Oxentiel:
                 settings = collections.OrderedDict()
         else:
             settings = collections.OrderedDict()
-            print("Failed to find config.")
 
         # Read defaults.
         asta_dir = os.path.dirname(os.path.realpath(__file__))
