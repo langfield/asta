@@ -11,7 +11,7 @@ import pytest
 import numpy as np
 from asta import Array, Tensor, typechecked, symbols
 
-os.environ["ASTA_TYPECHECK"] = "2"
+os.environ["ASTA_TYPECHECK"] = "1"
 
 X = symbols.X
 

@@ -3,7 +3,7 @@
 """ Example function for shapechecking. """
 from typing import Tuple
 import torch
-from asta import Tensor, typechecked, check, dims, symbols
+from asta import Tensor, typechecked, dims, symbols
 
 DIM = dims.DIM
 X = symbols.X

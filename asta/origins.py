@@ -17,6 +17,7 @@ from typing import (
     Sequence,
 )
 
+from oxentiel import Oxentiel
 from sympy.core.expr import Expr
 
 import asta.dims
@@ -28,9 +29,7 @@ from asta.classes import SubscriptableMeta
 from asta.display import (
     type_representation,
     pass_argument,
-    pass_return,
     fail_argument,
-    fail_return,
     fail_tuple,
     fail_tuple_length,
     fail_namedtuple,
@@ -40,6 +39,7 @@ from asta.display import (
     fail_sequence,
     fail_dict,
     fail_set,
+    fail_fallback,
 )
 from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
 
@@ -73,23 +73,23 @@ def qualified_name(obj: Any) -> str:
 
 
 def check_tuple(
-    name: str, value: Any, annotation: Any, equations: Set[Expr]
+    name: str, value: Any, annotation: Any, equations: Set[Expr], ox: Oxentiel
 ) -> Set[Expr]:
     """ Check an argument with annotation ``tuple`` or ``Tuple[]``. """
 
     # Specialized check for NamedTuples.
     if hasattr(annotation, "_field_types"):
         if not isinstance(value, annotation):
-            fail_namedtuple(name, qualified_name(annotation), qualified_name(value))
+            fail_namedtuple(name, qualified_name(annotation), qualified_name(value), ox)
 
         # pylint: disable=protected-access
         for subname, field_type in annotation._field_types.items():
             equations = check_annotation(
-                f"{name}.{subname}", getattr(value, subname), field_type, equations
+                f"{name}.{subname}", getattr(value, subname), field_type, equations, ox
             )
 
     elif not isinstance(value, tuple):
-        fail_tuple(name, qualified_name(value))
+        fail_tuple(name, qualified_name(value), ox)
 
     elif not getattr(annotation, "__args__", None):
         # Unparametrized Tuple or plain tuple.
@@ -109,28 +109,30 @@ def check_tuple(
             element_type = tuple_params[0]
             for i, element in enumerate(value):
                 equations = check_annotation(
-                    f"{name}[{i}]", element, element_type, equations
+                    f"{name}[{i}]", element, element_type, equations, ox
                 )
         elif tuple_params == ((),):
             if value != ():
-                fail_empty_tuple(name, qualified_name(value))
+                fail_empty_tuple(name, qualified_name(value), ox)
         else:
             if len(value) != len(tuple_params):
                 ann_rep = qualified_name(annotation)
-                fail_tuple_length(name, len(tuple_params), ann_rep, len(value))
+                fail_tuple_length(name, len(tuple_params), ann_rep, len(value), ox)
 
             for i, (elem, elem_type) in enumerate(zip(value, tuple_params)):
-                equations = check_annotation(f"{name}[{i}]", elem, elem_type, equations)
+                equations = check_annotation(
+                    f"{name}[{i}]", elem, elem_type, equations, ox
+                )
 
     return equations
 
 
 def check_list(
-    name: str, value: Any, annotation: Any, equations: Set[Expr]
+    name: str, value: Any, annotation: Any, equations: Set[Expr], ox: Oxentiel
 ) -> Set[Expr]:
     """ Check an argument with annotation ``list`` or ``List[]``. """
     if not isinstance(value, list):
-        fail_list(name, annotation, qualified_name(value))
+        fail_list(name, annotation, qualified_name(value), ox)
 
     # If annotation is a subscriptable generic (``List[...]``).
     if annotation is not list:
@@ -138,12 +140,12 @@ def check_list(
             value_type = annotation.__args__[0]
             if value_type is not Any:
 
-                # TODO: Consider adding a configuration option to avoid
-                # checking the entire list, maybe just do the first and last
-                # elements, or an intelligent sample.
-                for i, v in enumerate(value):
+                value_iterable = value
+                if not ox.check_all_sequence_elements:
+                    value_iterable = value_iterable[:1]
+                for i, v in enumerate(value_iterable):
                     element_equations = check_annotation(
-                        f"{name}[{i}]", v, value_type, equations
+                        f"{name}[{i}]", v, value_type, equations, ox
                     )
                     equations = equations.union(element_equations)
 
@@ -151,21 +153,23 @@ def check_list(
 
 
 def check_sequence(
-    name: str, value: Any, annotation: Any, equations: Set[Expr]
+    name: str, value: Any, annotation: Any, equations: Set[Expr], ox: Oxentiel
 ) -> Set[Expr]:
     """ Check an argument with annotation ``Sequence[*]``. """
     if not isinstance(value, collections.abc.Sequence):
-        fail_sequence(name, annotation, qualified_name(value))
+        fail_sequence(name, annotation, qualified_name(value), ox)
 
     # Consider removing this test or even just figuring out what it does?
     if annotation.__args__ not in (None, annotation.__parameters__):
         value_type = annotation.__args__[0]
         if value_type is not Any:
 
-            # TODO: Consider not iterating over entire sequence.
-            for i, v in enumerate(value):
+            value_iterable = value
+            if not ox.check_all_sequence_elements:
+                value_iterable = value_iterable[:1]
+            for i, v in enumerate(value_iterable):
                 element_equations = check_annotation(
-                    f"{name}[{i}]", v, value_type, equations
+                    f"{name}[{i}]", v, value_type, equations, ox
                 )
                 equations = equations.union(element_equations)
 
@@ -173,11 +177,11 @@ def check_sequence(
 
 
 def check_dict(
-    name: str, value: Any, annotation: Any, equations: Set[Expr]
+    name: str, value: Any, annotation: Any, equations: Set[Expr], ox: Oxentiel
 ) -> Set[Expr]:
     """ Check an argument with annotation ``Dict[*]``. """
     if not isinstance(value, dict):
-        fail_dict(name, annotation, qualified_name(value))
+        fail_dict(name, annotation, qualified_name(value), ox)
 
     # Equivalently: if annotation is ``Dict[*]``.
     if annotation is not dict:
@@ -186,10 +190,10 @@ def check_dict(
             if key_type is not Any or value_type is not Any:
                 for k, v in value.items():
                     key_equations = check_annotation(
-                        f"{name}.<key>", k, key_type, equations
+                        f"{name}.<key>", k, key_type, equations, ox
                     )
                     val_equations = check_annotation(
-                        f"{name}[{k}]", v, value_type, equations
+                        f"{name}[{k}]", v, value_type, equations, ox
                     )
 
                     equations = equations.union(key_equations, val_equations)
@@ -198,11 +202,11 @@ def check_dict(
 
 
 def check_set(
-    name: str, value: Any, annotation: Any, equations: Set[Expr]
+    name: str, value: Any, annotation: Any, equations: Set[Expr], ox: Oxentiel
 ) -> Set[Expr]:
     """ Check an argument with annotation ``Set[*]``. """
     if not isinstance(value, AbstractSet):
-        fail_set(name, annotation, qualified_name(value))
+        fail_set(name, annotation, qualified_name(value), ox)
 
     # Equivalently: if annotation is ``Set[*]``.
     if annotation is not set:
@@ -211,14 +215,16 @@ def check_set(
             if value_type is not Any:
                 for v in value:
                     set_equations = check_annotation(
-                        f"{name}.<set_element>", v, value_type, equations
+                        f"{name}.<set_element>", v, value_type, equations, ox
                     )
                     equations = equations.union(set_equations)
 
     return equations
 
 
-def refresh(annotation: SubscriptableMeta) -> Tuple[SubscriptableMeta, bool]:
+def refresh(
+    annotation: SubscriptableMeta, ox: Oxentiel
+) -> Tuple[SubscriptableMeta, bool]:
     """ Load an asta type annotation containing classical placeholders. """
     dtype = annotation.dtype
     shape = annotation.shape
@@ -239,7 +245,7 @@ def refresh(annotation: SubscriptableMeta) -> Tuple[SubscriptableMeta, bool]:
                     initialized = False
                     name = placeholder.name
                     if name not in uninitialized_placeholder_names:
-                        fail_uninitialized(name)
+                        fail_uninitialized(name, ox)
                     uninitialized_placeholder_names.add(name)
 
                 # Handle case where placeholder is unpacked in annotation.
@@ -265,26 +271,43 @@ def refresh(annotation: SubscriptableMeta) -> Tuple[SubscriptableMeta, bool]:
     return refreshed_annotation, initialized
 
 
-def get_equations(
-    equations: Set[Expr], annotation: SubscriptableMeta, arg: Any,
+def check_asta(
+    name: str, value: Any, annotation: Any, equations: Set[Expr], ox: Oxentiel
 ) -> Set[Expr]:
-    """ Computes subscript argument equations via shapecheck/attrcheck calls. """
-    shape_equations: Set[Expr] = set()
-    attr_equations: Set[Expr] = set()
+    """ Check asta subscriptable class types. """
 
-    if annotation.shape is not None:
+    annotation, initialized = refresh(annotation, ox)
+    if not initialized:
+        return equations
 
-        # HARDCODE
-        # Handle case where type(shape) != tuple, e.g. ``torch.Size``.
-        arg_shape = tuple(arg.shape)
-        assert not isinstance(arg_shape, torch.Size)
+    # Check if the literal ``value`` matches the annotation.
+    rep: str = type_representation(value)
 
-        # Grab equations from shapecheck call.
-        shape_match, shape_equations = shapecheck(arg_shape, annotation.shape)
-        attr_match, attr_equations = attrcheck(arg, annotation.kwattrs)
-        assert shape_match and attr_match
+    # If the isinstance check fails, print/raise an error.
+    if not isinstance(value, annotation):
+        fail_argument(name, annotation, rep, ox)
 
-    equations = equations.union(shape_equations, attr_equations)
+    # Otherwise, print a pass.
+    else:
+        pass_argument(name, annotation, rep, ox)
+
+        # Update equation set.
+        shape_equations: Set[Expr] = set()
+        attr_equations: Set[Expr] = set()
+
+        if annotation.shape is not None:
+
+            # HARDCODE
+            # Handle case where type(shape) != tuple, e.g. ``torch.Size``.
+            value_shape = tuple(value.shape)
+            assert not isinstance(value_shape, torch.Size)
+
+            # Grab equations from shapecheck call.
+            shape_match, shape_equations = shapecheck(value_shape, annotation.shape)
+            attr_match, attr_equations = attrcheck(value, annotation.kwattrs)
+            assert shape_match and attr_match
+
+        equations = equations.union(shape_equations, attr_equations)
 
     return equations
 
@@ -307,7 +330,7 @@ ORIGIN_TYPE_CHECKERS = {
 
 
 def check_annotation(
-    name: str, value: Any, annotation: Any, equations: Set[Expr]
+    name: str, value: Any, annotation: Any, equations: Set[Expr], ox: Oxentiel
 ) -> Set[Expr]:
     """ Check if ``value`` is of type ``annotation`` for asta types only. """
 
@@ -323,47 +346,20 @@ def check_annotation(
     # solution, all the annotations' solutions must agree for a given function
     # signature.
 
-    # Determine which display functions to use.
-    if name == "return":
-        fail_fn = fail_return
-        pass_fn = pass_return
-    else:
-        fail_fn = fail_argument
-        pass_fn = pass_argument
-
     # Get origin type.
     origin: Any = getattr(annotation, "__origin__", None)
     _subclass_check_unions = hasattr(Union, "__union_set_params__")
 
-    # Only check if the annotation is an asta subscriptable class.
-    # TODO: Consider moving this into a ``check_asta`` function.
+    # Treat asta types.
     if isinstance(annotation, SubscriptableMeta):
-        annotation, initialized = refresh(annotation)
-        if not initialized:
-            return equations
-
-        # Check if the literal ``value`` matches the annotation.
-        rep: str = type_representation(value)
-        # HARDCODE
-        identifier = "0" if name == "return" else name
-
-        # If the isinstance check fails, print/raise an error.
-        if not isinstance(value, annotation):
-            fail_fn(identifier, annotation, rep)
-
-        # Otherwise, print a pass.
-        else:
-            pass_fn(identifier, annotation, rep)
-
-            # Update variable dimension map.
-            equations = get_equations(equations, annotation, value)
+        equations = check_asta(name, value, annotation, equations, ox)
 
     elif origin is not None:
         checker_fn = ORIGIN_TYPE_CHECKERS[origin]
         if checker_fn:
-            equations = checker_fn(name, value, annotation, equations)
+            equations = checker_fn(name, value, annotation, equations, ox)
         else:
-            equations = check_annotation(name, value, origin, equations)
+            equations = check_annotation(name, value, origin, equations, ox)
     elif inspect.isclass(annotation):
 
         subclass_callable: bool = issubclass(annotation, Callable)  # type: ignore
@@ -371,8 +367,7 @@ def check_annotation(
         has_args: bool = hasattr(annotation, "__args__")
 
         if issubclass(annotation, Tuple):  # type: ignore[arg-type]
-            # TODO: Merge equations.
-            tuple_equations = check_tuple(name, value, annotation, equations)
+            equations = check_tuple(name, value, annotation, equations, ox)
         elif subclass_callable and has_args:
             # Needed on Python 3.5.0 to 3.5.2
             # check_callable(name, value, annotation, memo)
@@ -403,11 +398,8 @@ def check_annotation(
                 annotation = (bytearray, bytes)
 
             if not isinstance(value, annotation):
-                # TODO: Write fallback fail function.
-                """
-                raise TypeError(
-                    'type of {} must be {}; got {} instead'.
-                    format(name, qualified_name(annotation), qualified_name(value)))
-                """
+                fail_fallback(
+                    name, qualified_name(annotation), qualified_name(value), ox
+                )
 
     return equations
