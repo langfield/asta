@@ -37,9 +37,11 @@ def parse_subscript(
 ) -> Tuple[Optional[type], Optional[Tuple], Optional[Dict[str, Any]], str]:
     """ Set class attributes based on the passed dtype/dim data. """
     kind: str = ""
-    dtype: Optional[type] = None
-    shape: Optional[Tuple] = None
-    kwattrs: Optional[Dict[str, Any]] = None
+    if hasattr(cls, "kind"):
+        kind = cls.kind
+    dtype: Optional[type] = cls.dtype
+    shape: Optional[Tuple] = cls.shape
+    kwattrs: Optional[Dict[str, Any]] = cls.kwattrs
 
     if isinstance(item, (type, dtype_metaclass)) and item != Scalar:
         dtype, kind = cls.get_dtype(item)
