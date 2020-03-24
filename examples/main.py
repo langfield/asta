@@ -17,7 +17,7 @@ def main() -> None:
     try:
         add(ob)
     except TypeError:
-        print("TYPECHECK FAILED.")
+        print("TYPECHECK FAILED AS EXPECTED.")
 
     try:
         product(u, v)

@@ -3,4 +3,5 @@
 on=yes
 raise-errors=yes
 print-passes=yes
+check-non-asta-types=no
 check-all-sequence-elements=no
