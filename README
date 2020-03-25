@@ -262,7 +262,7 @@ Todo
   better. (NO)
 - Add more descriptive error if you pass torch dtype for an Array or numpy
   dtype for a Tensor. (DONE)
-- Add ``CudaTensor`` class.
+- Add ``CudaTensor`` class. (DONE)
 - Consider adding support for arbitrary shape/type constraints as subscript
   arguments. They would be of the form:
 
@@ -351,7 +351,7 @@ _ Add support for generics:
     _ Sequence (DONE)
     - Dict (DONE)
     - Set (DONE)
-    - Callable
+    - Callable (DONE)
 - Write tests for decorated classes, attributes, equation solver, placeholders,
   instance/class/metaclass methods, and the above generic subscriptable types.
 - Resolve the discrepancy between default dtypes of tensors (float32 in TF),

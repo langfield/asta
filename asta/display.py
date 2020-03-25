@@ -1,5 +1,5 @@
 """ Functions for generating typechecker output. """
-from typing import Any, Dict, Set, List
+from typing import Any, Dict, Set, List, FrozenSet
 
 import numpy as np
 from sympy.core.expr import Expr
@@ -140,6 +140,113 @@ def fail_set(name: str, ann: Any, rep: str, ox: Oxentiel) -> None:
     """ Print/raise error when ``Set[*]`` fails isinstance check. """
     err = f"{FAIL}: Argument '{name}' must be a set. Expected type: '{ann}' "
     err += f"Actual type: '{rep}'"
+    handle_error(err, ox)
+
+
+def fail_callable(name: str, ann: Any, rep: str, ox: Oxentiel) -> None:
+    """ Print/raise error when ``Callable[*]`` argument is not callable. """
+    err = f"{FAIL}: Argument '{name}' is not callable. Expected type: '{ann}' "
+    err += f"Actual type: '{rep}'"
+    handle_error(err, ox)
+
+
+def fail_too_many_args(
+    name: str, expected_num_args: int, declared_num_args: int, ox: Oxentiel
+) -> None:
+    """ Print/raise error when ``Callable[*]`` argument has too few arguments. """
+    err = f"{FAIL}: Callable '{name}' has too many arguments in its declaration. "
+    err += f"Exepected: {expected_num_args} Declared: {declared_num_args}"
+    handle_error(err, ox)
+
+
+def fail_too_few_args(
+    name: str, expected_num_args: int, declared_num_args: int, ox: Oxentiel
+) -> None:
+    """ Print/raise error when ``Callable[*]`` argument has too few arguments. """
+    err = f"{FAIL}: Callable '{name}' has too few arguments in its declaration. "
+    err += f"Exepected: {expected_num_args} Declared: {declared_num_args}"
+    handle_error(err, ox)
+
+
+def fail_protocol(name: str, ann_rep: str, rep: str, ox: Oxentiel) -> None:
+    """ Print/raise error when ``Protocol[*]`` fails issubclass check. """
+    err = f"{FAIL}: Argument '{name}' of type {rep} is not compatible "
+    err += f"with the {ann_rep} protocol."
+    handle_error(err, ox)
+
+
+def fail_union(name: str, typelist: str, rep: str, ox: Oxentiel) -> None:
+    """ Print/raise error when ``Union[*]`` fails typecheck. """
+    err = f"{FAIL}: Argument '{name}' must be one of 'Union[{typelist}]'. "
+    err += f"Actual type: '{rep}'"
+    handle_error(err, ox)
+
+
+def fail_class(name: str, ann: str, rep: str, ox: Oxentiel) -> None:
+    """ Print/raise error when argument should be a class but is not of type type. """
+    err = f"{FAIL}: Argument '{name}' must be a class. Expected type: '{ann}' "
+    err += f"Actual type: '{rep}'"
+    handle_error(err, ox)
+
+
+def fail_subclass(name: str, supercls: str, rep: str, ox: Oxentiel) -> None:
+    """ Print/raise error when argument should be subclass of ``expected_class``. """
+    err = f"{FAIL}: Argument '{name}' should be a subclass of '{supercls}' "
+    err += f"Actual type: '{rep}'"
+    handle_error(err, ox)
+
+
+def fail_complex(name: str, rep: str, ox: Oxentiel) -> None:
+    """ Print/raise error when argument should be a complex number. """
+    err = f"{FAIL}: Argument '{name}' should be a complex number. "
+    err += f"Actual type: '{rep}'"
+    handle_error(err, ox)
+
+
+def fail_float(name: str, rep: str, ox: Oxentiel) -> None:
+    """ Print/raise error when argument should be a floating point number. """
+    err = f"{FAIL}: Argument '{name}' should be a float. "
+    err += f"Actual type: '{rep}'"
+    handle_error(err, ox)
+
+
+def fail_text_io(name: str, rep: str, ox: Oxentiel) -> None:
+    """ Print/raise error when argument should be a text-based I/O object. """
+    err = f"{FAIL}: Argument '{name}' should be a text-based I/O object. "
+    err += f"Actual type: '{rep}'"
+    handle_error(err, ox)
+
+
+def fail_binary_io(name: str, rep: str, ox: Oxentiel) -> None:
+    """ Print/raise error when argument should be a binary I/O object. """
+    err = f"{FAIL}: Argument '{name}' should be a binary I/O object. "
+    err += f"Actual type: '{rep}'"
+    handle_error(err, ox)
+
+
+def fail_io(name: str, rep: str, ox: Oxentiel) -> None:
+    """ Print/raise error when argument should be an I/O object. """
+    err = f"{FAIL}: Argument '{name}' should be an I/O object. "
+    err += f"Actual type: '{rep}'"
+    handle_error(err, ox)
+
+
+def fail_literal(name: str, options: List[Any], arg: Any, ox: Oxentiel) -> None:
+    """ Print/raise error when argument should match a given literal. """
+    err = f"{FAIL}: Argument '{name}' should be one of '{options}' "
+    err += f"Actual value: '{arg}'"
+    handle_error(err, ox)
+
+
+def fail_keys(
+    name: str,
+    expected_keys: FrozenSet[Any],
+    existing_keys: FrozenSet[Any],
+    ox: Oxentiel,
+) -> None:
+    """ Print/raise error when typed dict argument has extra or missing keys. """
+    err = f"{FAIL}: Argument '{name}' should be a typed dictionary with keys: "
+    err += f"'{expected_keys}'. Actual keys: '{existing_keys}'"
     handle_error(err, ox)
 
 
