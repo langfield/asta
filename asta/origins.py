@@ -30,6 +30,8 @@ from asta.array import Array
 from asta._array import _ArrayMeta
 from asta.classes import SubscriptableMeta
 from asta.display import (
+    get_type_name,
+    qualified_name,
     type_representation,
     pass_argument,
     fail_argument,
@@ -80,30 +82,6 @@ except ImportError:
     Literal = None
 
 # pylint: disable=too-many-lines
-
-
-def get_type_name(type_: type) -> str:
-    """ ``typing.*`` types don't have a __name__ on Python 3.7+. """
-    # pylint: disable=protected-access
-    name: str = getattr(type_, "__name__", None)
-    if name is None:
-        name = type_._name
-    return name
-
-
-def qualified_name(obj: Any) -> str:
-    """
-    Return the qualified name (e.g. package.module.Type) for the given object.
-
-    Builtins and types from the :mod:`typing` package get special treatment by having the module
-    name stripped from the generated name.
-
-    """
-    type_ = obj if inspect.isclass(obj) else type(obj)
-    module = type_.__module__
-    qualname: str = type_.__qualname__
-    return qualname if module in ("typing", "builtins") else f"{module}.{qualname}"
-
 
 def refresh(
     annotation: SubscriptableMeta, ox: Oxentiel
@@ -564,7 +542,6 @@ def check_annotation(
 
     # Get origin type.
     origin: Any = getattr(annotation, "__origin__", None)
-    _subclass_check_unions = hasattr(Union, "__union_set_params__")
 
     # Treat asta types.
     if isinstance(annotation, SubscriptableMeta):
@@ -582,13 +559,10 @@ def check_annotation(
     elif inspect.isclass(annotation):
 
         subclass_callable: bool = issubclass(annotation, Callable)  # type: ignore
-        subclass_union: bool = issubclass(annotation, Union)  # type: ignore
         has_args: bool = hasattr(annotation, "__args__")
 
         if issubclass(annotation, Tuple):  # type: ignore[arg-type]
             equations = check_tuple(name, value, annotation, equations, ox)
-        elif _subclass_check_unions and subclass_union:
-            equations = check_union(name, value, annotation, equations, ox)
         elif issubclass(annotation, dict) and hasattr(annotation, "__annotations__"):
             equations = check_typed_dict(name, value, annotation, equations, ox)
         elif ox.check_non_asta_types:

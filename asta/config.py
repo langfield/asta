@@ -150,7 +150,7 @@ def get_ox() -> Oxentiel:
         for key, val in settings.items():
             new_val: Any = val
             if val in ("yes", "no"):
-                new_val = True if val == "yes" else "no"
+                new_val = True if val == "yes" else False
             new_settings[key.replace("-", "_")] = new_val
         settings = new_settings
 

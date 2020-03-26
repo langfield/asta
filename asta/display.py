@@ -22,6 +22,30 @@ FAIL = f"{Color.RED}FAILED{Color.END}"
 PASS = f"{Color.GREEN}PASSED{Color.END}"
 
 
+
+def get_type_name(type_: type) -> str:
+    """ ``typing.*`` types don't have a __name__ on Python 3.7+. """
+    # pylint: disable=protected-access
+    name: str = getattr(type_, "__name__", None)
+    if name is None:
+        name = type_._name
+    return name
+
+
+def qualified_name(obj: Any) -> str:
+    """
+    Return the qualified name (e.g. package.module.Type) for the given object.
+
+    Builtins and types from the :mod:`typing` package get special treatment by having the module
+    name stripped from the generated name.
+
+    """
+    type_ = obj if inspect.isclass(obj) else type(obj)
+    module = type_.__module__
+    qualname: str = type_.__qualname__
+    return qualname if module in ("typing", "builtins") else f"{module}.{qualname}"
+
+
 def type_representation(arg: Any) -> str:
     """ Get a string representation of an argument including dtype and shape. """
     rep = repr(type(arg))
@@ -272,7 +296,7 @@ def fail_fallback(name: str, annrep: str, rep: str, ox: Oxentiel) -> None:
 
 def get_header(decorated) -> str:  # type: ignore[no-untyped-def]
     """ Print the typecheck header. """
-    core = f"asta::{decorated.__module__}.{decorated.__name__}()"
+    core = f"asta::{decorated.__module__}.{decorated.__qualname__}()"
     bold_core = f"<{Color.BOLD}{core}{Color.END}>"
     min_pad_size = 10
     pad_size = 100 - (len(core) + 2)

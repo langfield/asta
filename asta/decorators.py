@@ -49,12 +49,6 @@ def validate_annotations(  # type: ignore[no-untyped-def]
     pure_args = args
     refs = ("self", "cls", "mcs")
 
-    # DEBUG
-    assert (
-        inspect.ismethod(decorated)
-        or isinstance(decorated, (classmethod, staticmethod))
-    ) == (len(sig.parameters) == num_non_return_annots + 1 and paramlist[0] in refs)
-
     if len(sig.parameters) == num_non_return_annots + 1 and paramlist[0] in refs:
         pure_args = pure_args[1:]  # type: ignore[assignment]
     for i, arg in enumerate(pure_args):
@@ -94,7 +88,8 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
     if "ASTA_TYPECHECK" in os.environ and not os.environ["ASTA_TYPECHECK"] == "1":
         return decorated
     ox: Oxentiel = get_ox()
-    ox.on = ox.on and os.environ["ASTA_TYPECHECK"] == "1"
+    if "ASTA_TYPECHECK" in os.environ:
+        ox.on = ox.on and os.environ["ASTA_TYPECHECK"] == "1"
 
     # Treat classes.
     if inspect.isclass(decorated):
@@ -154,7 +149,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         for name, arg in checkable_args.items():
             annotation = annotations[name]
             equations = check_annotation(name, arg, annotation, equations, ox)
-        del annotation
+            del annotation
 
         # Check return.
         ret = decorated(*args, **kwargs)
