@@ -83,6 +83,7 @@ except ImportError:
 
 # pylint: disable=too-many-lines
 
+
 def refresh(
     annotation: SubscriptableMeta, ox: Oxentiel
 ) -> Tuple[SubscriptableMeta, bool]:

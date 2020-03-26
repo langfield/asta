@@ -1,4 +1,5 @@
 """ Functions for generating typechecker output. """
+import inspect
 from typing import Any, Dict, Set, List, FrozenSet
 
 import numpy as np
@@ -20,7 +21,6 @@ if _TENSORFLOW_IMPORTED:
 
 FAIL = f"{Color.RED}FAILED{Color.END}"
 PASS = f"{Color.GREEN}PASSED{Color.END}"
-
 
 
 def get_type_name(type_: type) -> str:
