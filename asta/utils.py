@@ -8,6 +8,8 @@ from typing import List, Dict, Tuple, Union, Any, Set, Optional
 from sympy import solvers, simplify
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
+from sympy.core.numbers import Number
+from sympy.logic.boolalg import BooleanTrue
 from asta.constants import (
     EllipsisType,
     NonInstanceType,
@@ -40,6 +42,7 @@ def shapecheck(
     # Case 1: No ellipses or wildcards.
     if Ellipsis not in cls_shape and -1 not in cls_shape:
         equal, equations = check_equal(cls_shape, inst_shape, equations)
+
         if not equal:
             match = False
         shape_pieces = [(elem,) for elem in inst_shape]
@@ -150,17 +153,8 @@ def shapecheck(
             assert len(shape_pieces) == len(cls_shape) == cls_idx
 
     # Solve our system of equations if it is nonempty.
-    if match and equations:
-        symbols: Set[Symbol] = set()
-        for equation in equations:
-            symbols = symbols.union(equation.free_symbols)
-        solutions: List[Dict[Symbol, int]] = solvers.solve(
-            equations, symbols, dict=True
-        )
-
-        # If we don't get a unique solution, it's not a match.
-        if len(solutions) != 1:
-            match = False
+    if match:
+        match, _, _ = astasolver(equations)
 
     return match, equations
 
@@ -187,6 +181,66 @@ def attrcheck(
             break
 
     return match, equations
+
+
+def astasolver(
+    equations: Set[Expr],
+) -> Tuple[bool, Set[Symbol], List[Dict[Symbol, int]]]:
+    """ Solve equations for positive size free symbols. """
+    # Treat case where there are no symbols, and the equation is ``0 = 0``.
+    if 0 in equations:
+        equations.remove(0)
+
+    # If there are no nontrivial equations, return True.
+    if not equations:
+        return True, set(), []
+
+    symbols: Set[Symbol] = set()
+    for equation in equations:
+        symbols = symbols.union(equation.free_symbols)
+    solutions: List[Dict[Symbol, int]] = solvers.solve(equations, symbols, dict=True)
+
+    # Remove symbolic solutions, e.g. ``X = Y``.
+    pruned_solutions: List[Dict[Symbol, Expr]] = []
+    for solution in solutions:
+        all_numbers = True
+        for _key, val in solution.items():
+            if not isinstance(val, Number):
+                all_numbers = False
+                break
+        if all_numbers:
+            pruned_solutions.append(solution)
+
+    """
+    # Only use positive solutions.
+    positive_solutions: List[Dict[Symbol, Expr]] = []
+    for solution in solutions:
+
+        # Determine if all values of symbols in solution are positive.
+        all_positive = True
+        for _key, val in solution.items():
+
+            # Compare the value to zero.
+            relational = val > 0
+
+            # If the value is a literal and relational is ``True``, continue.
+            if isinstance(relational, BooleanTrue):
+                continue
+
+            # Otherwise, solve the relational.
+            resolution = solvers.solve(relational)
+            if resolution is not True:
+                all_positive = False
+                break
+
+        # If all dimension values in the solution are positive, include solution.
+        if all_positive:
+            positive_solutions.append(solution)
+    """
+
+    # TODO: Solutions must be unique and NUMERICAL.
+    # If we don't get at least one solution, it's not a match.
+    return len(pruned_solutions) >= 1, symbols, pruned_solutions
 
 
 def is_subtuple(

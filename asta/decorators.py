@@ -3,14 +3,13 @@
 """ Defines the ``@typechecked`` decorator. """
 import os
 import inspect
-from typing import Any, Tuple, Dict, Set, List
+from typing import Any, Tuple, Dict, Set
 
-from sympy import solvers
 from sympy.core.expr import Expr
-from sympy.core.symbol import Symbol
 
 from oxentiel import Oxentiel
 
+from asta.utils import astasolver
 from asta.config import get_ox
 from asta.origins import check_annotation
 from asta.display import (
@@ -158,17 +157,9 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         del annotation
 
         # Solve our system of equations if it is nonempty.
-        if equations:
-            symbols: Set[Symbol] = set()
-            for equation in equations:
-                symbols = symbols.union(equation.free_symbols)
-            solutions: List[Dict[Symbol, int]] = solvers.solve(
-                equations, symbols, dict=True
-            )
-
-            # If we don't get a unique solution, it's not a match.
-            if len(solutions) != 1:
-                fail_system(equations, symbols, solutions, ox)
+        solvable, symbols, solutions = astasolver(equations)
+        if not solvable:
+            fail_system(equations, symbols, solutions, ox)
 
         return ret
 
