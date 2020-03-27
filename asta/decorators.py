@@ -15,6 +15,7 @@ from asta.origins import check_annotation
 from asta.display import (
     fail_system,
     get_header,
+    handle_pass,
 )
 
 
@@ -84,11 +85,11 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
     _wrapper : ``Callable[[Any], Any]``.
         The decorated version of ``decorated``.
     """
-    if "ASTA_TYPECHECK" in os.environ and not os.environ["ASTA_TYPECHECK"] == "1":
-        return decorated
     ox: Oxentiel = get_ox()
     if "ASTA_TYPECHECK" in os.environ:
         ox.on = ox.on and os.environ["ASTA_TYPECHECK"] == "1"
+    if not ox.on:
+        return decorated
 
     # Treat classes.
     if inspect.isclass(decorated):
@@ -133,7 +134,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
 
         # Print header for ``decorated``.
         header: str = get_header(decorated)
-        print(header)
+        handle_pass(header, ox)
 
         equations: Set[Expr] = set()
         annotations: Dict[str, Any] = decorated.__annotations__

@@ -401,6 +401,14 @@ _ Add support for generics:
   raise an error saying the attribute has already been defined. Perhaps
   ``kwattrs`` allows overwriting as long as there are no keys in common or
   something. Is an error expected behavior, or should we be lenient?
+- Consider adding checks before looping over any iterable to make sure the
+  subscript annotation is an astatype in the case where
+  ``ox.check_non_asta_types`` is false.
+- Consider adding probabilistic checking, i.e. if a function has been called
+  100,000 times and none of them have failed, maybe stop checking it,
+  especially if it's taking a long time. We can do inference and estimate the
+  probability that the function will fail.
+- Before we do the above, attempt to jit compile everything in asta.
 
 
 Acknowledgements
