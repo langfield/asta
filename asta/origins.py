@@ -124,36 +124,6 @@ def refresh(
             else:
                 dimvars.append(item)
 
-            """
-            # Handle fixed placeholders.
-            if isinstance(item, Placeholder):
-                placeholder = item
-
-                # We look for ``dimvar`` in the ``dims`` storage module, and if
-                # it returns a placeholder instead of a dimension/shape
-                # literal, we know that the variable hasn't been initialized.
-                dimvar = getattr(asta.dims, placeholder.name)
-
-                print("Dimvar:", dimvar)
-
-                # Catch uninitialized placeholders.
-                if isinstance(dimvar, Placeholder):
-                    initialized = False
-                    name = placeholder.name
-
-                    # Prevents us from printing the same error message twice.
-                    if name not in uninitialized_placeholder_names:
-                        fail_uninitialized(name, ox)
-                    uninitialized_placeholder_names.add(name)
-
-                # Handle case where placeholder is unpacked in annotation.
-                if placeholder.unpacked:
-                    for elem in dimvar:
-                        dimvars.append(elem)
-                else:
-                    dimvars.append(dimvar)
-            """
-
         assert len(dimvars) == len(shape)
         shape = tuple(dimvars)
 
@@ -166,12 +136,10 @@ def refresh(
             refreshed_annotation = subscriptable_class[dtype, shape]  # type: ignore
         else:
             refreshed_annotation = subscriptable_class[shape]  # type: ignore
-    else:
-        # TODO: What if ``dtype`` is None here?
+    elif dtype is not None:
         refreshed_annotation = subscriptable_class[dtype]
-
-    print("Refreshed annotation:", refreshed_annotation)
-    print("Initialized:", initialized)
+    else:
+        refreshed_annotation = annotation
 
     return refreshed_annotation, initialized
 

@@ -14,6 +14,7 @@ symbol_map: Dict[Symbol, Optional[int]] = {}
 
 class Oxentiel:
     """ An instance of this object acts as a proxy for this module. """
+
     def __init__(self) -> None:
         # Set any attributes here - before initialisation (they remain normal attrs).
         self.symbol_map: Dict[Symbol, Optional[int]] = {}

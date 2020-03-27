@@ -9,14 +9,18 @@ from typing import List, Tuple
 import torch
 import pytest
 import numpy as np
+
+from hypothesis import given
+
 from asta import Array, Tensor, typechecked, symbols, dims
+from asta.tests import hpt
 
 os.environ["ASTA_TYPECHECK"] = "1"
 
 X = symbols.X
 P = dims.P
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name, no-value-for-parameter
 
 
 @typechecked
@@ -182,6 +186,18 @@ def placeholder_repeated(t: Tensor[P, P, P]) -> Tensor[P, P, P]:
     return t
 
 
+@typechecked
+def placeholder_incorrect_repeated(_t: Tensor[P, P, P]) -> Tensor[P, P, P]:
+    """ Test function. """
+    return torch.ones((50, 50, 50))
+
+
+@typechecked
+def empty_subscript(t: Tensor) -> Tensor:
+    """ Test function. """
+    return t
+
+
 def test_np_typechecked():
     """ Test that decorator raises a TypeError when argument is wrong. """
     arr = np.zeros((1, 1))
@@ -252,8 +268,15 @@ def test_placeholder_arithmetic():
     v = torch.ones((256 + 1024,))
     u = torch.ones((32, 32, 32))
     dims.P = 32
-    print("Dims symbol map:", dims.symbol_map)
 
     placeholder_arithmetic_1(t)
     placeholder_arithmetic_2(v)
     placeholder_repeated(u)
+    with pytest.raises(TypeError):
+        placeholder_incorrect_repeated(u)
+
+
+@given(hpt.tensors())
+def test_empty_subscript(t: Tensor) -> None:
+    """ Test that plain ``Tensor`` accepts all tensor arguments. """
+    empty_subscript(t)
