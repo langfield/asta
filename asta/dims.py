@@ -8,6 +8,7 @@ from typing import Dict, Any
 dims: Dict[str, Any]
 
 
+# TODO: Overload arithmetic for these objects or replace with symbols!
 class Placeholder:
     """ Placeholder for annotation dimensions. """
 
