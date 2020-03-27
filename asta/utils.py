@@ -9,7 +9,6 @@ from sympy import solvers, simplify
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
 from sympy.core.numbers import Number
-from sympy.logic.boolalg import BooleanTrue
 from asta.constants import (
     EllipsisType,
     NonInstanceType,
@@ -211,34 +210,6 @@ def astasolver(
         if all_numbers:
             pruned_solutions.append(solution)
 
-    """
-    # Only use positive solutions.
-    positive_solutions: List[Dict[Symbol, Expr]] = []
-    for solution in solutions:
-
-        # Determine if all values of symbols in solution are positive.
-        all_positive = True
-        for _key, val in solution.items():
-
-            # Compare the value to zero.
-            relational = val > 0
-
-            # If the value is a literal and relational is ``True``, continue.
-            if isinstance(relational, BooleanTrue):
-                continue
-
-            # Otherwise, solve the relational.
-            resolution = solvers.solve(relational)
-            if resolution is not True:
-                all_positive = False
-                break
-
-        # If all dimension values in the solution are positive, include solution.
-        if all_positive:
-            positive_solutions.append(solution)
-    """
-
-    # TODO: Solutions must be unique and NUMERICAL.
     # If we don't get at least one solution, it's not a match.
     return len(pruned_solutions) >= 1, symbols, pruned_solutions
 
