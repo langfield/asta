@@ -121,6 +121,26 @@ def refresh(
                             expression = expression.subs(symbol, value)
                 dimvars.append(expression)
 
+            # Handle fixed placeholders.
+            elif isinstance(item, Placeholder):
+                placeholder = item
+                dimvar = getattr(asta.shapes, placeholder.name)
+
+                # Catch uninitialized placeholders.
+                if isinstance(dimvar, Placeholder):
+                    initialized = False
+                    name = placeholder.name
+                    if name not in uninitialized_placeholder_names:
+                        fail_uninitialized(name, ox)
+                    uninitialized_placeholder_names.add(name)
+
+                # Handle case where placeholder is unpacked in annotation.
+                if placeholder.unpacked:
+                    for elem in dimvar:
+                        dimvars.append(elem)
+                else:
+                    dimvars.append(dimvar)
+
             else:
                 dimvars.append(item)
 
