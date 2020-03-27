@@ -9,11 +9,12 @@ from typing import List, Tuple
 import torch
 import pytest
 import numpy as np
-from asta import Array, Tensor, typechecked, symbols
+from asta import Array, Tensor, typechecked, symbols, dims
 
 os.environ["ASTA_TYPECHECK"] = "1"
 
 X = symbols.X
+P = dims.P
 
 # pylint: disable=invalid-name
 
@@ -163,6 +164,24 @@ def tuple_generic_inference(
     return a, torch.cat((a, b), dim=1)
 
 
+@typechecked
+def placeholder_arithmetic_1(t: Tensor[X + P]) -> Tensor[X + P]:
+    """ Test function. """
+    return t
+
+
+@typechecked
+def placeholder_arithmetic_2(t: Tensor[X ** 2 + P ** 2]) -> Tensor[X ** 2 + P ** 2]:
+    """ Test function. """
+    return t
+
+
+@typechecked
+def placeholder_repeated(t: Tensor[P, P, P]) -> Tensor[P, P, P]:
+    """ Test function. """
+    return t
+
+
 def test_np_typechecked():
     """ Test that decorator raises a TypeError when argument is wrong. """
     arr = np.zeros((1, 1))
@@ -225,3 +244,16 @@ def test_subscriptable_generics():
     tuple_generic_inference(bigger_tuple)
     with pytest.raises(TypeError):
         tuple_generic(bad_tuple)
+
+
+def test_placeholder_arithmetic():
+    """ Test that placeholders support arithmetic. """
+    t = torch.ones((16 + 32,))
+    v = torch.ones((256 + 1024,))
+    u = torch.ones((32, 32, 32))
+    dims.P = 32
+    print("Dims symbol map:", dims.symbol_map)
+
+    placeholder_arithmetic_1(t)
+    placeholder_arithmetic_2(v)
+    placeholder_repeated(u)
