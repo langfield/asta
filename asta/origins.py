@@ -23,13 +23,17 @@ from typing import (
 
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
+from sympy.core.numbers import Number
+from sympy.core.numbers import Integer
 
 from oxentiel import Oxentiel
 
 import asta.dims
+import asta.shapes
 from asta.utils import shapecheck, attrcheck
 from asta.array import Array
 from asta._array import _ArrayMeta
+from asta.shapes import Placeholder
 from asta.classes import SubscriptableMeta
 from asta.display import (
     get_type_name,
@@ -42,6 +46,7 @@ from asta.display import (
     fail_namedtuple,
     fail_empty_tuple,
     fail_uninitialized,
+    fail_numerical_expression,
     fail_list,
     fail_sequence,
     fail_dict,
@@ -99,26 +104,37 @@ def refresh(
     if annotation.shape is not None:
         for item in annotation.shape:
 
-            # item = <symbol + symbol**2>
-            # Use sympy to get a set of symbols used in expression. (``expr.free_symbols``)
-            # Check if any of the symbols in our list are in ``asta.dims.symbol_map``.
-            # Out of those that are, we check if any have ``None`` for their value.
-            # If so, we treat as before and raise an uninitialized error.
-            # Otherwise, we substitute in their values with sympy.
-
             if isinstance(item, (Symbol, Expr)):
                 expression = copy.deepcopy(item)
+
+                # Use sympy to get a set of symbols used in expression.
                 for symbol in item.free_symbols:
+
+                    # Check if any of the symbols in our list are in
+                    # ``asta.dims.symbol_map``.
                     if symbol in asta.dims.symbol_map:
                         value = asta.dims.symbol_map[symbol]
+
+                        # Out of those that are, we check if any have ``None``
+                        # for their value.
                         if value is None:
+
+                            # If so, we treat as before and raise an uninitialized error.
                             name = symbol.name
+
                             # Prevents us from printing the same error message twice.
                             if name not in uninitialized_placeholder_names:
                                 fail_uninitialized(name, ox)
                             uninitialized_placeholder_names.add(name)
                         else:
+                            # Otherwise, we substitute in their values with sympy.
                             expression = expression.subs(symbol, value)
+
+                # If this is a number (contains no symbols), it ought to be an integer.
+                if isinstance(expression, Number):
+                    if not isinstance(expression, Integer):
+                        fail_numerical_expression(item, expression, ox)
+                    expression = int(expression)
                 dimvars.append(expression)
 
             # Handle fixed placeholders.

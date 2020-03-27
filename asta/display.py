@@ -1,6 +1,6 @@
 """ Functions for generating typechecker output. """
 import inspect
-from typing import Any, Dict, Set, List, FrozenSet
+from typing import Any, Dict, Set, List, FrozenSet, Union
 
 import numpy as np
 from sympy.core.expr import Expr
@@ -108,6 +108,15 @@ def fail_return(name: str, ann: SubscriptableMeta, rep: str, ox: Oxentiel) -> No
 def fail_uninitialized(name: str, ox: Oxentiel) -> None:
     """ Print/raise typecheck fail error for uninitialized placeholder. """
     err = f"{FAIL}: Uninitialized placeholder '{name}'"
+    handle_error(err, ox)
+
+
+def fail_numerical_expression(
+    item: str, expression: Union[Expr, Symbol], ox: Oxentiel
+) -> None:
+    """ For when refreshed expression yields non-integer ``Number``. """
+    err = f"{FAIL}: Refreshed value '{expression}' for expression '{item}' "
+    err += f"does not yield an integer."
     handle_error(err, ox)
 
 

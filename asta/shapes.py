@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """ A module for programmatically storing dimension sizes for annotations. """
 from typing import Dict, Any
-from sympy.core.symbol import Symbol
 
 # pylint: disable=redefined-outer-name, too-few-public-methods
 # pylint: disable=no-self-use, too-many-ancestors
@@ -10,7 +9,7 @@ from sympy.core.symbol import Symbol
 dims: Dict[str, Any]
 
 
-class Placeholder(Symbol):
+class Placeholder:
     """ Placeholder for annotation dimensions. """
 
     def __init__(self, name: str) -> None:
