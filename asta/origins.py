@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Functions for checking type annotations and their origin types. """
+import copy
 import inspect
 import collections
 from io import TextIOBase, RawIOBase, IOBase, BufferedIOBase
@@ -20,11 +21,12 @@ from typing import (
     BinaryIO,
 )
 
-from oxentiel import Oxentiel
 from sympy.core.expr import Expr
+from sympy.core.symbol import Symbol
+
+from oxentiel import Oxentiel
 
 import asta.dims
-from asta.dims import Placeholder
 from asta.utils import shapecheck, attrcheck
 from asta.array import Array
 from asta._array import _ArrayMeta
@@ -81,7 +83,7 @@ try:
 except ImportError:
     Literal = None
 
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines, too-many-nested-blocks
 
 
 def refresh(
@@ -97,15 +99,49 @@ def refresh(
     if annotation.shape is not None:
         for item in annotation.shape:
 
+            # item = <symbol + symbol**2>
+            # Use sympy to get a set of symbols used in expression. (``expr.free_symbols``)
+            # Check if any of the symbols in our list are in ``asta.dims.symbol_map``.
+            # Out of those that are, we check if any have ``None`` for their value.
+            # If so, we treat as before and raise an uninitialized error.
+            # Otherwise, we substitute in their values with sympy.
+
+            if isinstance(item, (Symbol, Expr)):
+                expression = copy.deepcopy(item)
+                for symbol in item.free_symbols:
+                    if symbol in asta.dims.symbol_map:
+                        value = asta.dims.symbol_map[symbol]
+                        if value is None:
+                            name = symbol.name
+                            # Prevents us from printing the same error message twice.
+                            if name not in uninitialized_placeholder_names:
+                                fail_uninitialized(name, ox)
+                            uninitialized_placeholder_names.add(name)
+                        else:
+                            expression = expression.subs(symbol, value)
+                dimvars.append(expression)
+
+            else:
+                dimvars.append(item)
+
+            """
             # Handle fixed placeholders.
             if isinstance(item, Placeholder):
                 placeholder = item
+
+                # We look for ``dimvar`` in the ``dims`` storage module, and if
+                # it returns a placeholder instead of a dimension/shape
+                # literal, we know that the variable hasn't been initialized.
                 dimvar = getattr(asta.dims, placeholder.name)
+
+                print("Dimvar:", dimvar)
 
                 # Catch uninitialized placeholders.
                 if isinstance(dimvar, Placeholder):
                     initialized = False
                     name = placeholder.name
+
+                    # Prevents us from printing the same error message twice.
                     if name not in uninitialized_placeholder_names:
                         fail_uninitialized(name, ox)
                     uninitialized_placeholder_names.add(name)
@@ -116,8 +152,8 @@ def refresh(
                         dimvars.append(elem)
                 else:
                     dimvars.append(dimvar)
-            else:
-                dimvars.append(item)
+            """
+
         assert len(dimvars) == len(shape)
         shape = tuple(dimvars)
 
@@ -126,9 +162,16 @@ def refresh(
 
     refreshed_annotation: SubscriptableMeta
     if shape is not None:
-        refreshed_annotation = subscriptable_class[dtype, shape]  # type: ignore
+        if dtype is not None:
+            refreshed_annotation = subscriptable_class[dtype, shape]  # type: ignore
+        else:
+            refreshed_annotation = subscriptable_class[shape]  # type: ignore
     else:
+        # TODO: What if ``dtype`` is None here?
         refreshed_annotation = subscriptable_class[dtype]
+
+    print("Refreshed annotation:", refreshed_annotation)
+    print("Initialized:", initialized)
 
     return refreshed_annotation, initialized
 
@@ -139,6 +182,10 @@ def check_asta(
     """ Check asta subscriptable class types. """
 
     annotation, initialized = refresh(annotation, ox)
+
+    # If we haven't set the value of a placeholder used in the annotation, e.g.
+    # we have ``Tensor[X, X + 1]`` but haven't yet set ``dims.X = 8``, then we
+    # don't proceed with the check.
     if not initialized:
         return equations
 

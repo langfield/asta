@@ -8,7 +8,7 @@ import numpy as np
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
 
-from asta.dims import Placeholder
+from asta.shapes import Placeholder
 
 _TORCH_IMPORTED = False
 try:
