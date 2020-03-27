@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Functions for checking type annotations and their origin types. """
-import copy
 import inspect
 import collections
 from io import TextIOBase, RawIOBase, IOBase, BufferedIOBase
@@ -102,10 +101,10 @@ def refresh(
     uninitialized_placeholder_names: Set[str] = set()
 
     if annotation.shape is not None:
-        for item in annotation.shape:
+        for i, item in enumerate(annotation.shape):
 
             if isinstance(item, (Symbol, Expr)):
-                expression = copy.deepcopy(item)
+                expression = item
 
                 # Use sympy to get a set of symbols used in expression.
                 for symbol in item.free_symbols:
@@ -119,7 +118,7 @@ def refresh(
                         # for their value.
                         if value is None:
 
-                            # If so, we treat as before and raise an uninitialized error.
+                            # If so, we treat as before and raise an error.
                             name = symbol.name
 
                             # Prevents us from printing the same error message twice.
@@ -133,7 +132,7 @@ def refresh(
                 # If this is a number (contains no symbols), it ought to be an integer.
                 if isinstance(expression, Number):
                     if not isinstance(expression, Integer):
-                        fail_numerical_expression(item, expression, ox)
+                        fail_numerical_expression(annotation.shape[i], expression, ox)
                     expression = int(expression)
                 dimvars.append(expression)
 
@@ -544,8 +543,6 @@ def check_literal(name: str, value: Any, annotation: Any, ox: Oxentiel) -> None:
 # Equality checks are applied to these.
 ORIGIN_TYPE_CHECKERS = {
     AbstractSet: check_set,
-    Callable: check_callable,
-    collections.abc.Callable: check_callable,
     dict: check_dict,
     Dict: check_dict,
     list: check_list,
@@ -557,7 +554,6 @@ ORIGIN_TYPE_CHECKERS = {
     Set: check_set,
     tuple: check_tuple,
     Tuple: check_tuple,
-    type: check_class,
     Union: check_union,
 }
 
