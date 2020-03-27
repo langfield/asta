@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """ A module for programmatically storing dimension sizes for annotations. """
 import sys
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Union
 from sympy import symbols
 from sympy.core.symbol import Symbol
 
@@ -10,6 +10,11 @@ from sympy.core.symbol import Symbol
 
 # Dummy map to trick pylint.
 symbol_map: Dict[Symbol, Optional[int]] = {}
+
+
+def __getattr__(name: str) -> Any:
+    """ This exists solely to trick pylint. """
+    raise NotImplementedError
 
 
 class Oxentiel:
@@ -22,11 +27,17 @@ class Oxentiel:
         # After initialization, setting attributes is the same as setting an item.
         self.__initialized = True
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> Union[Symbol, int]:
         symbol = symbols(name)
         if symbol not in self.symbol_map:
             self.symbol_map[symbol] = None
-        return symbol
+            return symbol
+
+        value: Optional[int] = self.symbol_map[symbol]
+        if value is None:
+            return symbol
+        assert isinstance(value, int)
+        return value
 
     def __setattr__(self, name: str, value: Any) -> None:
         """ Maps attributes to values. Only if we are initialised. """
