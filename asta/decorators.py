@@ -153,9 +153,10 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
 
         # Check return.
         ret = decorated(*args, **kwargs)
-        annotation = annotations["return"]
-        equations = check_annotation("return", ret, annotation, equations, ox)
-        del annotation
+        if "return" in annotations:
+            annotation = annotations["return"]
+            equations = check_annotation("return", ret, annotation, equations, ox)
+            del annotation
 
         # Solve our system of equations if it is nonempty.
         solvable, symbols, solutions = astasolver(equations)
