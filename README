@@ -394,6 +394,24 @@ _ Add support for generics:
   subscript, raising an error if an attribute is already set. Actually, on
   second though, instead of saving the subscript, just save the parsed class
   attributes. (DONE)
+- Bug: tuples cannot be summed without unpacking ``Tensor[shapes.OB + (1,)]``.
+- AFTER MERGE
+- Consider adding an ``args`` module. So if you have a function:
+
+    >>> def fn(k: int) -> Tensor[<k>]:
+    >>>     return torch.ones((k,))
+
+  where the shape is dependent on the arguments, you could annotate it.
+  Syntax would look like this:
+
+    >>> def fn(k: int) -> Tensor[args.k]:
+    >>>     return torch.ones((k,))
+
+- Consider adding probabilistic checking, i.e. if a function has been called
+  100,000 times and none of them have failed, maybe stop checking it,
+  especially if it's taking a long time. We can do inference and estimate the
+  probability that the function will fail.
+- Before we do the above, attempt to jit compile everything in asta.
 - Consider making overwrites of class attributes like:
 
     >>> Tensor[float][float]
@@ -404,11 +422,14 @@ _ Add support for generics:
 - Consider adding checks before looping over any iterable to make sure the
   subscript annotation is an astatype in the case where
   ``ox.check_non_asta_types`` is false.
-- Consider adding probabilistic checking, i.e. if a function has been called
-  100,000 times and none of them have failed, maybe stop checking it,
-  especially if it's taking a long time. We can do inference and estimate the
-  probability that the function will fail.
-- Before we do the above, attempt to jit compile everything in asta.
+- Consider making ``@typechecked`` callable so we can call:
+
+    >>> @typechecked(print=True)
+    >>> def ...
+
+  So then we can have ``print-all-passes=no`` but still print the one we're
+  debugging.
+
 
 
 Acknowledgements

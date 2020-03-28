@@ -32,7 +32,6 @@ import asta.shapes
 from asta.utils import shapecheck, attrcheck
 from asta.array import Array
 from asta._array import _ArrayMeta
-from asta.shapes import Placeholder
 from asta.classes import SubscriptableMeta
 from asta.display import (
     get_type_name,
@@ -67,6 +66,7 @@ from asta.display import (
     fail_fallback,
 )
 from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
+from asta.placeholder import Placeholder
 
 METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
 
@@ -136,7 +136,7 @@ def refresh(
                     expression = int(expression)
                 dimvars.append(expression)
 
-            # Handle fixed placeholders.
+            # Handle fixed placeholders (only used for tuples).
             elif isinstance(item, Placeholder):
                 placeholder = item
                 dimvar = getattr(asta.shapes, placeholder.name)
@@ -159,8 +159,11 @@ def refresh(
             else:
                 dimvars.append(item)
 
-        assert len(dimvars) == len(shape)
-        shape = tuple(dimvars)
+        # Treat the case where dimvars looks like ``[(1,2,3)]``.
+        if len(dimvars) == 1:
+            shape = dimvars[0]
+        else:
+            shape = tuple(dimvars)
 
     # Note we're guaranteed that ``annotation`` has type ``SubscriptableMeta``.
     subscriptable_class = METAMAP[type(annotation)]
@@ -598,8 +601,8 @@ def check_annotation(
     elif origin is not None:
         checker_function_map = ORIGIN_TYPE_CHECKERS
         if ox.check_non_asta_types:
-            checker_function_map.update(NON_ASTA_CHECKERS)
-        checker_fn: Callable = checker_function_map[origin]  # type: ignore
+            checker_function_map.update(NON_ASTA_CHECKERS)  # type: ignore
+        checker_fn: Callable = checker_function_map[origin]
         if checker_fn:
             equations = checker_fn(name, value, annotation, equations, ox)
         else:
