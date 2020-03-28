@@ -65,7 +65,7 @@ from asta.display import (
     fail_too_few_args,
     fail_fallback,
 )
-from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
+from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED, ALL_DIM_TYPES
 from asta.placeholder import Placeholder
 
 METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
@@ -87,7 +87,7 @@ try:
 except ImportError:
     Literal = None
 
-# pylint: disable=too-many-lines, too-many-nested-blocks
+# pylint: disable=too-many-lines, too-many-nested-blocks, too-many-branches
 
 
 def refresh(
@@ -139,25 +139,64 @@ def refresh(
             # Handle fixed placeholders (only used for tuples).
             elif isinstance(item, Placeholder):
                 placeholder = item
-                dimvar = getattr(asta.shapes, placeholder.name)
 
-                # Catch uninitialized placeholders.
-                if isinstance(dimvar, Placeholder):
-                    initialized = False
-                    name = placeholder.name
-                    if name not in uninitialized_placeholder_names:
-                        fail_uninitialized(name, ox)
-                    uninitialized_placeholder_names.add(name)
+                # What is item in case ``(*<placeholder>,) + (1,)``?
+                # It will look like ``Array[<placeholder>, 1]``.
+                if placeholder.name is not None:
+                    dimvar = getattr(asta.shapes, placeholder.name)
 
-                # Handle case where placeholder is unpacked in annotation.
-                if placeholder.unpacked:
-                    for elem in dimvar:
-                        dimvars.append(elem)
+                    # Catch uninitialized placeholders.
+                    if isinstance(dimvar, Placeholder):
+                        initialized = False
+                        name = placeholder.name
+                        if name not in uninitialized_placeholder_names:
+                            fail_uninitialized(name, ox)
+                        uninitialized_placeholder_names.add(name)
+
+                    # Handle case where placeholder is unpacked in annotation.
+                    if placeholder.unpacked:
+                        for elem in dimvar:
+                            dimvars.append(elem)
+                    else:
+                        dimvars.append(dimvar)
                 else:
-                    dimvars.append(dimvar)
+                    # Treat case where placeholder has ``len(self.contents) > 1``.
+                    for elem in placeholder.contents:
 
-            else:
+                        # If it's a placeholder, it ought to be non-composite.
+                        if isinstance(elem, Placeholder):
+                            assert elem.name is not None
+                            assert len(elem.contents) == 0
+                            dimvar = getattr(asta.shapes, elem.name)
+
+                            # Catch uninitialized placeholders.
+                            if isinstance(dimvar, Placeholder):
+                                initialized = False
+                                name = placeholder.name
+                                if name not in uninitialized_placeholder_names:
+                                    fail_uninitialized(name, ox)
+                                uninitialized_placeholder_names.add(name)
+
+                            for size in dimvar:
+                                assert isinstance(size, int)
+                                dimvars.append(size)
+                        elif isinstance(elem, tuple):
+                            for size in elem:
+                                assert isinstance(size, int)
+                                dimvars.append(size)
+                        else:
+                            content_err = "Placeholder contents can only be "
+                            content_err += "Placeholders or tuples of integers."
+                            raise TypeError(content_err)
+            elif isinstance(item, tuple):
+                for elem in item:
+                    if not isinstance(elem, int):
+                        raise TypeError("Shape elements must be integers.")
                 dimvars.append(item)
+            elif isinstance(item, tuple(ALL_DIM_TYPES)):
+                dimvars.append(item)
+            else:
+                raise TypeError(f"Unsupported shape element type: '{type(item)}'")
 
         # Treat the case where dimvars looks like ``[(1,2,3)]``.
         if len(dimvars) == 1:

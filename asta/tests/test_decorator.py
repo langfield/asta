@@ -12,13 +12,16 @@ import numpy as np
 
 from hypothesis import given
 
-from asta import Array, Tensor, typechecked, symbols, dims
+from asta import Array, Tensor, typechecked, symbols, dims, shapes
 from asta.tests import hpt
 
 os.environ["ASTA_TYPECHECK"] = "1"
 
 X = symbols.X
-P = dims.P
+D = dims.D
+S1 = shapes.S1
+S2 = shapes.S2
+S3 = shapes.S3
 
 # pylint: disable=invalid-name, no-value-for-parameter
 
@@ -169,25 +172,25 @@ def tuple_generic_inference(
 
 
 @typechecked
-def placeholder_arithmetic_1(t: Tensor[X + P]) -> Tensor[X + P]:
+def placeholder_arithmetic_1(t: Tensor[X + D]) -> Tensor[X + D]:
     """ Test function. """
     return t
 
 
 @typechecked
-def placeholder_arithmetic_2(t: Tensor[X ** 2 + P ** 2]) -> Tensor[X ** 2 + P ** 2]:
+def placeholder_arithmetic_2(t: Tensor[X ** 2 + D ** 2]) -> Tensor[X ** 2 + D ** 2]:
     """ Test function. """
     return t
 
 
 @typechecked
-def placeholder_repeated(t: Tensor[P, P, P]) -> Tensor[P, P, P]:
+def placeholder_repeated(t: Tensor[D, D, D]) -> Tensor[D, D, D]:
     """ Test function. """
     return t
 
 
 @typechecked
-def placeholder_incorrect_repeated(_t: Tensor[P, P, P]) -> Tensor[P, P, P]:
+def placeholder_incorrect_repeated(_t: Tensor[D, D, D]) -> Tensor[D, D, D]:
     """ Test function. """
     return torch.ones((50, 50, 50))
 
@@ -196,6 +199,22 @@ def placeholder_incorrect_repeated(_t: Tensor[P, P, P]) -> Tensor[P, P, P]:
 def empty_subscript(t: Tensor) -> Tensor:
     """ Test function. """
     return t
+
+
+@typechecked
+def subscript_summation_1(_t: Tensor[S1 + (1, 2, 3) + S2 + S3]):
+    """ Test function. """
+
+
+@typechecked
+def subscript_summation_2(_t: Tensor[S1 + (1,)]):
+    """ Test function. """
+
+
+"""
+@typechecked
+def subscript_summation_3(_t: Tensor[S1 + (1 + D,)]):
+"""
 
 
 def test_np_typechecked():
@@ -267,7 +286,7 @@ def test_placeholder_arithmetic():
     t = torch.ones((16 + 32,))
     v = torch.ones((256 + 1024,))
     u = torch.ones((32, 32, 32))
-    dims.P = 32
+    dims.D = 32
 
     placeholder_arithmetic_1(t)
     placeholder_arithmetic_2(v)
@@ -280,3 +299,16 @@ def test_placeholder_arithmetic():
 def test_empty_subscript(t: Tensor) -> None:
     """ Test that plain ``Tensor`` accepts all tensor arguments. """
     empty_subscript(t)
+
+
+def test_shape_arithmetic() -> None:
+    """ Test that arithmetic on ``asta.shapes`` objects works. """
+    shapes.S1 = (1, 1)
+    shapes.S2 = (1, 1, 1)
+    shapes.S3 = (1, 1, 1, 1, 1)
+    t_1 = torch.ones(shapes.S1 + (1, 2, 3) + shapes.S2 + shapes.S3)
+    t_2 = torch.ones(shapes.S1 + (1,))
+    t_3 = torch.ones(shapes.S1 + (1 + dims.D,))
+    subscript_summation_1(t_1)
+    subscript_summation_2(t_2)
+    # subscript_summation_3(t_3)

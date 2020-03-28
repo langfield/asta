@@ -156,6 +156,7 @@ CORE_DIM_TYPES: List[type] = [
 NUMPY_DIM_TYPES: List[type] = CORE_DIM_TYPES
 TORCH_DIM_TYPES: List[type] = CORE_DIM_TYPES + [torch.Size]
 TF_DIM_TYPES: List[type] = CORE_DIM_TYPES + [tf.TensorShape]
+ALL_DIM_TYPES: List[type] = CORE_DIM_TYPES + [torch.Size, tf.TensorShape]
 NP_UNSIZED_TYPE_KINDS: Dict[type, str] = {bytes: "S", str: "U", object: "O"}
 TORCH_DTYPE_MAP: Dict[type, torch.dtype] = {
     int: torch.int32,
