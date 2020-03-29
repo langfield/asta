@@ -19,6 +19,7 @@ os.environ["ASTA_TYPECHECK"] = "1"
 
 X = symbols.X
 Y = symbols.Y
+Z = symbols.Z
 D = dims.D
 S1 = shapes.S1
 S2 = shapes.S2
@@ -225,6 +226,14 @@ def concatenation(
     return np.concatenate((a, b), axis=2)
 
 
+@typechecked
+def negative_size_concatenation(
+    a: Array[float, (1, 2, X)], b: Array[float, (1, 2, X + Y)]
+) -> Array[float, (1, 2, Z)]:
+    """ Test function. """
+    return np.concatenate((a, b), axis=2)
+
+
 def test_np_typechecked():
     """ Test that decorator raises a TypeError when argument is wrong. """
     arr = np.zeros((1, 1))
@@ -344,4 +353,10 @@ def test_symbol_arithmetic() -> None:
     """ Tests that symbols play nicely together. """
     a = np.ones((1, 2, 3))
     b = np.ones((1, 2, 4))
+    c = np.ones((1, 2, 12))
+    d = np.ones((1, 2, 23))
+    e = np.ones((1, 2, 10))
+    f = np.ones((1, 2, 4))
     concatenation(a, b)
+    concatenation(c, d)
+    negative_size_concatenation(e, f)
