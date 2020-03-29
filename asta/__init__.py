@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Top-level typing classes. """
+from asta import warning
 from asta.array import Array
 from asta.scalar import Scalar
 from asta.decorators import typechecked
