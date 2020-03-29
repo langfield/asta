@@ -14,12 +14,7 @@ enforcement for the classes described above.
 
 Installation
 ------------
-Install with:
-
 $ pip install asta
-
-or
-
 $ pip install git+git://github.com/brendanxwhitaker/asta.git
 
 
