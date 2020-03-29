@@ -21,14 +21,9 @@ from typing import (
 )
 
 from sympy.core.expr import Expr
-from sympy.core.symbol import Symbol
-from sympy.core.numbers import Number
-from sympy.core.numbers import Integer
 
 from oxentiel import Oxentiel
 
-import asta.dims
-import asta.shapes
 from asta.utils import shapecheck, attrcheck
 from asta.array import Array
 from asta._array import _ArrayMeta
@@ -43,8 +38,6 @@ from asta.display import (
     fail_tuple_length,
     fail_namedtuple,
     fail_empty_tuple,
-    fail_uninitialized,
-    fail_numerical_expression,
     fail_list,
     fail_sequence,
     fail_dict,
@@ -65,8 +58,8 @@ from asta.display import (
     fail_too_few_args,
     fail_fallback,
 )
-from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED, ALL_DIM_TYPES
-from asta.placeholder import Placeholder
+from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
+from asta.substitution import substitute
 
 METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
 
@@ -98,112 +91,21 @@ def refresh(
     shape = annotation.shape
     dimvars = []
     initialized = True
-    uninitialized_placeholder_names: Set[str] = set()
 
     if annotation.shape is not None:
-        for i, item in enumerate(annotation.shape):
 
-            if isinstance(item, (Symbol, Expr)):
-                expression = item
+        dimvars, _, initialized = substitute(shape, ox)
 
-                # Use sympy to get a set of symbols used in expression.
-                for symbol in item.free_symbols:
-
-                    # Check if any of the symbols in our list are in
-                    # ``asta.dims.symbol_map``.
-                    if symbol in asta.dims.symbol_map:
-                        value = asta.dims.symbol_map[symbol]
-
-                        # Out of those that are, we check if any have ``None``
-                        # for their value.
-                        if value is None:
-
-                            # If so, we treat as before and raise an error.
-                            name = symbol.name
-
-                            # Prevents us from printing the same error message twice.
-                            if name not in uninitialized_placeholder_names:
-                                fail_uninitialized(name, ox)
-                            uninitialized_placeholder_names.add(name)
-                        else:
-                            # Otherwise, we substitute in their values with sympy.
-                            expression = expression.subs(symbol, value)
-
-                # If this is a number (contains no symbols), it ought to be an integer.
-                if isinstance(expression, Number):
-                    if not isinstance(expression, Integer):
-                        fail_numerical_expression(annotation.shape[i], expression, ox)
-                    expression = int(expression)
-                dimvars.append(expression)
-
-            # Handle fixed placeholders (only used for tuples).
-            elif isinstance(item, Placeholder):
-                placeholder = item
-
-                # What is item in case ``(*<placeholder>,) + (1,)``?
-                # It will look like ``Array[<placeholder>, 1]``.
-                if placeholder.name is not None:
-                    dimvar = getattr(asta.shapes, placeholder.name)
-
-                    # Catch uninitialized placeholders.
-                    if isinstance(dimvar, Placeholder):
-                        initialized = False
-                        name = placeholder.name
-                        if name not in uninitialized_placeholder_names:
-                            fail_uninitialized(name, ox)
-                        uninitialized_placeholder_names.add(name)
-
-                    # Handle case where placeholder is unpacked in annotation.
-                    if placeholder.unpacked:
-                        for elem in dimvar:
-                            dimvars.append(elem)
-                    else:
-                        dimvars.append(dimvar)
-                else:
-                    # Treat case where placeholder has ``len(self.contents) > 1``.
-                    for elem in placeholder.contents:
-
-                        # If it's a placeholder, it ought to be non-composite.
-                        if isinstance(elem, Placeholder):
-                            assert elem.name is not None
-                            assert len(elem.contents) == 0
-                            dimvar = getattr(asta.shapes, elem.name)
-
-                            # Catch uninitialized placeholders.
-                            if isinstance(dimvar, Placeholder):
-                                initialized = False
-                                name = placeholder.name
-                                if name not in uninitialized_placeholder_names:
-                                    fail_uninitialized(name, ox)
-                                uninitialized_placeholder_names.add(name)
-
-                            for size in dimvar:
-                                assert isinstance(size, int)
-                                dimvars.append(size)
-                        elif isinstance(elem, tuple):
-                            for size in elem:
-                                assert isinstance(size, int)
-                                dimvars.append(size)
-                        else:
-                            content_err = "Placeholder contents can only be "
-                            content_err += "Placeholders or tuples of integers."
-                            raise TypeError(content_err)
-            elif isinstance(item, tuple):
-                for elem in item:
-                    if not isinstance(elem, int):
-                        raise TypeError("Shape elements must be integers.")
-                dimvars.append(item)
-            elif isinstance(item, tuple(ALL_DIM_TYPES)):
-                dimvars.append(item)
+        # Unpack tuple elements of ``dimvars``.
+        unpacked: Tuple[Any] = tuple()
+        for elem in dimvars:
+            if isinstance(elem, tuple):
+                unpacked = unpacked + elem
             else:
-                raise TypeError(f"Unsupported shape element type: '{type(item)}'")
+                unpacked = unpacked + (elem,)
+        dimvars = unpacked
 
-        # Treat the case where dimvars looks like ``[(1,2,3)]``.
-        if len(dimvars) == 1:
-            shape = dimvars[0]
-        else:
-            shape = tuple(dimvars)
-
+        shape = tuple(dimvars)
     # Note we're guaranteed that ``annotation`` has type ``SubscriptableMeta``.
     subscriptable_class = METAMAP[type(annotation)]
 
