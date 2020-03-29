@@ -199,7 +199,7 @@ called ``ASTA_TYPECHECK``, which, if set to "1", will check, and will do
 nothing if set to "0". If the option from the environment variable and the
 configuration file conflict, asta will default to ``off``.
 
-An example config file is given below, and in ``.astarc`` in this repo.
+An example config file is given below, and in ``asta/defaults/astarc``.
 
 >>> [MASTER]
 >>>
