@@ -89,7 +89,7 @@ def refresh(
     """ Load an asta type annotation containing classical placeholders. """
     dtype = annotation.dtype
     shape = annotation.shape
-    dimvars = []
+    dimvars: List[Any] = []
     initialized = True
 
     if annotation.shape is not None:
@@ -97,12 +97,12 @@ def refresh(
         dimvars, _, initialized = substitute(shape, ox)
 
         # Unpack tuple elements of ``dimvars``.
-        unpacked: Tuple[Any] = tuple()
+        unpacked: List[Any] = []
         for elem in dimvars:
             if isinstance(elem, tuple):
-                unpacked = unpacked + elem
+                unpacked = unpacked + list(elem)
             else:
-                unpacked = unpacked + (elem,)
+                unpacked = unpacked + [elem]
         dimvars = unpacked
 
         shape = tuple(dimvars)
