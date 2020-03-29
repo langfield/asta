@@ -6,3 +6,5 @@ models/
 .hypothesis/
 .coverage
 *.egg-info
+build/
+dist/

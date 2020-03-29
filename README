@@ -4,15 +4,22 @@
 
 Shape annotations for numpy arrays and pytorch/tensorflow tensors.
 
-Usage
------
+Introduction
+------------
 This library defines subscriptable classes ``Array``, ``Tensor``, and
 ``TFTensor`` for use in ``isinstance()`` checks and type annotations.  It also
 adds a decorator, ``@typechecked``, which implements toggleable static type
 enforcement for the classes described above.
 
-Examples
---------
+
+Installation
+------------
+$ pip install asta
+$ pip install git+git://github.com/brendanxwhitaker/asta.git
+
+
+Basics
+------
 Asta supports checking dtypes and/or shapes with wildcards and ellipses:
 
 >>> Array[float]                # dtype=np.float64.
@@ -25,16 +32,97 @@ Asta supports checking dtypes and/or shapes with wildcards and ellipses:
 >>> Tensor[torch.uint8, 1]      # dtype=torch.uint8, shape=(1,).
 >>> TFTensor[tf.complex128, ()] # dtype=tf.complex128, shape=().
 
+
+Wildcard dimensions (-1)
+------------------------
+An ``-1`` can be used as a wildcard in place of a single dimension size. They
+behave as a stand-in for any positive integer, and they can be used as many
+times as desired within a shape hint.
+
+
+Ellipses (...)
+--------------
+An ``Ellipsis`` object can be used in place of a nonnegative integer number of
+positive integer dimension sizes. The intended use case for this is when you
+know the prefix of a tensor shape, the batch size for example, but not the
+remaining dimension sizes (perhaps they vary). You can use something like:
+
+>>> Array[32, ...]
+
+to match arrays with shape:
+
+>>> (32,)
+>>> (32, 24)
+>>> (32, 1, 2, 3)
+
+and so on. These should be a LAST RESORT, since as will be discussed below, we
+can specify dimensions, shapes, or portions of shapes as variables, even if
+they will change at runtime, e.g. on every iteration of some loop.
+
+Multiple ellipses can be used within a single annotation as well, in case you
+happen to know that a tensor or array will have a dimension size of 7 somewhere
+in its shape, but you don't know where, or you don't know the total rank.
+Something like the following:
+
+>>> TFTensor[..., 7, ...]
+
+will match tensorflow tensors with shape:
+
+>>> (7,)
+>>> (1, 7)
+>>> (7, 3)
+>>> (1, 2, 3, 7, 4, 5, 6)
+
+and so on. Note that two ellipses cannot be used consecutively, e.g.
+
+>>> Array[1, 2, ..., ..., 5]
+
+since asta won't be able to determine which dimensions should be substituted
+for which ellipsis object.
+
+
+Typechecked decorator
+---------------------
+As mentioned above, asta implements a decorator for runtime typechecking using
+type hints like ``Array[]``. It can be used to decorate functions, instance
+methods, class methods, metaclass methods, or even entire classes (this is just
+equivalent to decorating each of the class's methods).
+
+The following gives an example of using the ``@typechecked`` decorator to
+enforce torch tensor shapes and dtypes at runtime. The function ``kl`` will
+raise a TypeError if called with inputs which have any dtype other than
+``torch.float32``, or any shape other than ``(8, 64)``.
+
+>>> import os
+>>> import torch.nn.functional as F
+>>> from asta import Tensor, typechecked
+>>>
+>>> os.environ["ASTA_TYPECHECK"] = "1"
+>>>
+>>>
+>>> @typechecked
+>>> def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[()]:
+>>>     """ Computes the KL divergence of two Tensors of shape ``(8, 64)``. """
+>>>     divergence = F.kl_div(t_1, t_2, reduction="sum")
+>>>     return divergence
+
+A runnable example is given in ``example.py`` in the repository root. For a
+more fleshed-out, real world example, see ``asta/tests/rl/`` for a typechecked
+policy gradient implementation.
+
+
+Variable shapes and dimensions
+------------------------------
 Asta also supports variable shape arguments:
 
->>> from asta import dims
+>>> from asta import dims, shapes
 >>> BATCH_SIZE = dims.BATCH_SIZE
 >>> SEQ_LEN = dims.SEQ_LEN
->>> OBS_SHAPE = dims.OBS_SHAPE
+>>> OBS_SHAPE = shapes.OBS_SHAPE
 >>> ...
 >>> dims.BATCH_SIZE = 32
 >>> dims.SEQ_LEN = 256
->>> dims.OBS_SHAPE = (4, 5, 6)
+>>> shapes.OBS_SHAPE = (4, 5, 6)
 >>> ...
 >>> Tensor[float, BATCH_SIZE, SEQ_LEN]          # shape=(32,256).
 >>> Tensor[float, (BATCH_SIZE,) + OBS_SHAPE]    # shape=(32,4,5,6).
@@ -57,6 +145,20 @@ during execution:
 >>> x = torch.ones((768,))
 >>> y = identity(x)
 
+As seen above, this allows dimension or shape constants, stored in
+``asta.dims`` and ``asta.shapes`` respectively by setting a named attribute, to
+persist as globals across modules. This need not be constants, either. We can
+reset the value of ``dims.<NAME>``, and all typechecked function calls
+occurring after the aforementioned statement executes will reflect the updated
+value of ``dims.<NAME>``. Under the hood, this works because ``dims`` and
+``shapes`` are actually instances of classes with the ``__getattr__`` and
+``__setattr__`` functions overridden. They return a placeholder object for any
+attribute accessed, and then update the value of that placeholder whenever that
+attribute is set later on.
+
+
+Dimension inference
+-------------------
 Asta also supports arbitrary expressions of symbolic shape arguments:
 
 >>> from asta import symbols
@@ -67,27 +169,64 @@ Asta also supports arbitrary expressions of symbolic shape arguments:
 
 Checks on the above objects will do inference based on the passed tensor,
 constructing a system of equations based on the actual shape and returning a
-match if there exists a unique solution.
+match if there exists at least one solution to the system. This means the
+equation solver is lenient, if you pass it a system which has many solutions,
+or infinitely many solutions, it will still return a match. Something like:
 
-The following gives an example of using the ``@typechecked`` decorator to
-enforce torch tensor shapes and dtypes at runtime. The function ``kl`` will
-raise a TypeError if called with inputs which have any dtype other than
-``torch.float32``, or any shape other than ``(8, 64)``.
+>>> from asta import symbols
+>>> X = symbols.X
+>>> Y = symbols.Y
+>>> Tensor[X + Y]
 
->>> import os
->>> import torch.nn.functional as F
->>> from asta import Tensor, typechecked
->>>
->>> os.environ["ASTA_TYPECHECK"] = "1"
->>>
->>>
->>> @typechecked
->>> def kl(t_1: Tensor[float, 8, 64], t_2: Tensor[float, 8, 64]) -> Tensor[()]:
->>>     """ Computes the KL divergence of two Tensors of shape ``(8, 64)``. """
->>>     divergence = F.kl_div(t_1, t_2, reduction="sum")
->>>     return divergence
+used as an annotation for ``torch.ones((50,))``, for example, yields the
+equation ``X + Y = 50``, which has many solutions for positive integer values
+of ``X`` and ``Y``. But this will not raise an error. Similar to the case with
+Ellipses, symbols should only be used as a LAST RESORT, since it is often
+possible to make a lazy-definition of a ``dims`` placeholder prior to the
+function call instead, which will be more precise. They are useful, however, if
+you're averse to peppering your code with dimension storage statements (like
+``dims.W = 256`` or something), or if it doesn't matter what the specific
+values of the sizes are, only that they obey some constraint relative to each
+other.
 
-A runnable example is given in ``example.py`` in the repository root.
+
+Configuration
+-------------
+The behavior of the ``@typechecked`` decorator can be configured through a
+configuration file, like ``setup.cfg``, ``pyproject.toml``, ``astarc``, or
+``.astarc``. The ``on`` option can also be toggled via an environment variable
+called ``ASTA_TYPECHECK``, which, if set to "1", will check, and will do
+nothing if set to "0". If the option from the environment variable and the
+configuration file conflict, asta will default to ``off``.
+
+An example config file is given below, and in ``.astarc`` in this repo.
+
+>>> [MASTER]
+>>>
+>>> on=yes
+>>> raise-errors=yes
+>>> print-passes=yes
+>>> check-non-asta-types=no
+>>> check-all-sequence-elements=yes
+
+And explanations of the options:
+
+``on`` : Determines whether or not functions are typechecked. Does as little as
+    possible other than calling the wrapped function when set to ``no``.
+``raise-errors`` : If ``yes`` errors will be raised when a typecheck fails,
+    otherwise, the error will only be printed.
+``print-passes`` : If ``yes`` all passed typechecks will be printed, otherwise,
+    they will be silent (similar to mypy/pylint output).
+``check-non-asta-types`` : If ``yes`` asta will attempt to check the types of
+    everything passed to or returned from a function. A wide variety of types
+    are supported. Note: some of the helper functions for these have been
+    adapted from those in the package ``typeguard``. Otherwise, it will only
+    check ``Array``, ``Tensor``, and ``TFTensor``, and composites of these,
+    like ``Dict[str, Tensor[1,2,3]]``.
+``check-all-sequence-elements`` : If ``yes``, it will check the types of all
+    elements in iterable types like ``List[*]``. Otherwise, it will only check the
+    first element in an attempt to be faster.
+
 
 Subscript arguments
 -------------------
@@ -122,7 +261,13 @@ The valid subscript arguments for ``Array`` and ``Tensor`` are as follows:
 
         TFTensor
         --------
-        # TODO
+        1. Any python type from the following list:
+            a. int
+            b. float
+            c. bool
+            d. bytes
+        2. Any ``torch.Tensor``-supported tensorflow dtype, e.g. ``tf.int64``.
+        3. Omitted (no argument passed).
 
     Shapes
     ------
@@ -132,7 +277,11 @@ The valid subscript arguments for ``Array`` and ``Tensor`` are as follows:
     positive integer sizes, including zero-length sequences.
     4. ``()`` or ``Scalar``, which both indicate a scalar array or tensor.
     These are interchangeable.
-    5. Omitted (no argument passed).
+    5. Dimensions from ``asta.dims``.
+    6. Shapes from ``asta.shapes``.
+    7. Symbols from ``asta.symbols``.
+    8. Omitted (no argument passed).
+
 
 Shape constraints and best practices
 ------------------------------------
@@ -236,6 +385,12 @@ which pass will print to stdout. This behavior is intentional, and meant to
 help researchers avoid silent performance degradation due to leaving the
 environment variable set, which will cause a slight slowdown which would
 otherwise occur silently.
+
+
+========
+INTERNAL
+========
+
 
 Todo
 ----
@@ -398,7 +553,13 @@ _ Add support for generics:
   (DONE)
 - Bug: Header should still be printed when an error is raised if
   ``ox.print_passes`` is off. (DONE)
-- AFTER MERGE
+- ---MERGE---(DONE)
+- Update README (DONE)
+- Add warning when ``ox.print_passes`` is False, so that the user doesn't
+  accidentally leave it on, slowing down their program, and make this happen at
+  import-time, so that if the part where they're calling typechecked functions
+  doesn't happen for a while, they still know immediately. (DONE)
+- ---MERGE---
 - Consider adding an ``args`` module. So if you have a function:
 
     >>> def fn(k: int) -> Tensor[<k>]:
