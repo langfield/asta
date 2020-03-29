@@ -211,10 +211,9 @@ def subscript_summation_2(_t: Tensor[S1 + (1,)]):
     """ Test function. """
 
 
-"""
 @typechecked
 def subscript_summation_3(_t: Tensor[S1 + (1 + D,)]):
-"""
+    """ Test function. """
 
 
 def test_np_typechecked():
@@ -309,6 +308,24 @@ def test_shape_arithmetic() -> None:
     t_1 = torch.ones(shapes.S1 + (1, 2, 3) + shapes.S2 + shapes.S3)
     t_2 = torch.ones(shapes.S1 + (1,))
     t_3 = torch.ones(shapes.S1 + (1 + dims.D,))
+    t_4 = torch.ones(shapes.S1 + (1, 3, 3) + shapes.S2 + shapes.S3)
+    t_5 = torch.ones(shapes.S1 + (2,))
+    t_6 = torch.ones(shapes.S1 + (5 + dims.D,))
+    t_7 = torch.ones(shapes.S1 + (1, 2, 3) + shapes.S3 + shapes.S3)
+    t_8 = torch.ones(shapes.S2 + (1,))
+    t_9 = torch.ones(shapes.S3 + (1 + dims.D,))
     subscript_summation_1(t_1)
     subscript_summation_2(t_2)
-    # subscript_summation_3(t_3)
+    subscript_summation_3(t_3)
+    with pytest.raises(TypeError):
+        subscript_summation_1(t_4)
+    with pytest.raises(TypeError):
+        subscript_summation_2(t_5)
+    with pytest.raises(TypeError):
+        subscript_summation_3(t_6)
+    with pytest.raises(TypeError):
+        subscript_summation_1(t_7)
+    with pytest.raises(TypeError):
+        subscript_summation_2(t_8)
+    with pytest.raises(TypeError):
+        subscript_summation_3(t_9)
