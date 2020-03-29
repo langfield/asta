@@ -63,15 +63,15 @@ def read(fname: str) -> str:
 
 setup(
     name="asta",
-    version="0.0.4",
+    version="0.0.6a1",
     author="Brendan Whitaker",
     description=("Shape annotations for homogeneous numpy arrays and pytorch/tensorflow tensors."),
     license="GPLv3",
     packages=["asta"],
     long_description=read("README"),
     long_description_content_type="text/plain",
-    install_requires=["numpy", "sympy", "oxentiel"],
-    package_data={"asta": ["asta/defaults/astarc"]},
+    install_requires=["toml", "numpy", "sympy", "oxentiel"],
+    package_data={"asta": ["defaults/astarc"]},
     include_package_data=True,
     python_requires=">=3.7.0",
     classifiers=[
