@@ -1,4 +1,6 @@
+toml
 numpy
 sympy
 pytest
 hypothesis
+oxentiel

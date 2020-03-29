@@ -58,7 +58,7 @@ from asta.display import (
     fail_too_few_args,
     fail_fallback,
 )
-from asta.constants import torch, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
+from asta.constants import torch, tf, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
 from asta.substitution import substitute
 
 METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
@@ -156,7 +156,7 @@ def check_asta(
             # HARDCODE
             # Handle case where type(shape) != tuple, e.g. ``torch.Size``.
             value_shape = tuple(value.shape)
-            assert not isinstance(value_shape, torch.Size)
+            assert not isinstance(value_shape, (torch.Size, tf.TensorShape))
 
             # Grab equations from shapecheck call.
             shape_match, shape_equations = shapecheck(value_shape, annotation.shape)

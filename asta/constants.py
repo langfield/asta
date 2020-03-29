@@ -65,16 +65,38 @@ class DTypes:
 class TFModule:
     """ A dummy tensorflow module for when tf is not installed. """
 
+    # pylint: disable=too-many-instance-attributes
     def __init__(self) -> None:
         self.Tensor = NonInstanceType
         self.TensorShape = NonInstanceType
         self.dtypes = DTypes()
         self.dtypes.DType = NonInstanceType
-        self.int64 = NonInstanceType
-        self.float64 = NonInstanceType
+        self.bfloat16 = NonInstanceType
         self.bool = NonInstanceType
+        self.complex = NonInstanceType
         self.complex128 = NonInstanceType
+        self.complex64 = NonInstanceType
+        self.double = NonInstanceType
+        self.float16 = NonInstanceType
+        self.float32 = NonInstanceType
+        self.float64 = NonInstanceType
+        self.half = NonInstanceType
+        self.int16 = NonInstanceType
+        self.int32 = NonInstanceType
+        self.int64 = NonInstanceType
+        self.int8 = NonInstanceType
+        self.qint16 = NonInstanceType
+        self.qint32 = NonInstanceType
+        self.qint8 = NonInstanceType
+        self.quint16 = NonInstanceType
+        self.quint8 = NonInstanceType
+        self.resource = NonInstanceType
         self.string = NonInstanceType
+        self.uint16 = NonInstanceType
+        self.uint32 = NonInstanceType
+        self.uint64 = NonInstanceType
+        self.uint8 = NonInstanceType
+        self.variant = NonInstanceType
 
 
 class ScalarMeta(type):
