@@ -97,9 +97,6 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         # Grab the module name.
         prefix = decorated.__qualname__ + "."
 
-        # DEBUG
-        print("Prefix:", prefix)
-
         # Iterate over attributes.
         for key, attr in decorated.__dict__.items():
 
@@ -133,6 +130,7 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
         """ Decorated/typechecked function. """
 
         # Print header for ``decorated``.
+        ox.decorated = decorated
         header: str = get_header(decorated)
         handle_pass(header, ox)
 
@@ -151,8 +149,11 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
             equations = check_annotation(name, arg, annotation, equations, ox)
             del annotation
 
-        # Check return.
+        # Call the decorated function.
         ret = decorated(*args, **kwargs)
+
+        # Check return.
+        ox.decorated = decorated
         if "return" in annotations:
             annotation = annotations["return"]
             equations = check_annotation("return", ret, annotation, equations, ox)

@@ -395,8 +395,9 @@ _ Add support for generics:
   second though, instead of saving the subscript, just save the parsed class
   attributes. (DONE)
 - Bug: tuples cannot be summed without unpacking ``Tensor[shapes.OB + (1,)]``.
+  (DONE)
 - Bug: Header should still be printed when an error is raised if
-  ``ox.print-passes`` is off.
+  ``ox.print_passes`` is off. (DONE)
 - AFTER MERGE
 - Consider adding an ``args`` module. So if you have a function:
 

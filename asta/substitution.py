@@ -79,7 +79,7 @@ def substitute(
 
             # What is item in case ``(*<placeholder>,) + (1,)``?
             # It will look like ``Array[<placeholder>, 1]``.
-            if not placeholder.composite:
+            if placeholder.name is not None:
                 replacement: Union[Placeholder, Tuple[int, ...]]
                 replacement = getattr(asta.shapes, placeholder.name)
 

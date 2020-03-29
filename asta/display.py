@@ -78,19 +78,6 @@ def pass_return(name: str, ann: SubscriptableMeta, rep: str, ox: Oxentiel) -> No
     handle_pass(msg, ox)
 
 
-def handle_error(err: str, ox: Oxentiel) -> None:
-    """ Either print or raise ``err``. """
-    if ox.raise_errors:
-        raise TypeError(err)
-    print(err)
-
-
-def handle_pass(msg: str, ox: Oxentiel) -> None:
-    """ Either print or raise ``err``. """
-    if ox.print_passes:
-        print(msg)
-
-
 def fail_argument(name: str, ann: SubscriptableMeta, rep: str, ox: Oxentiel) -> None:
     """ Print/raise typecheck fail error for arguments. """
     err = f"{FAIL}: Argument '{name}' has wrong type. Expected type: '{ann}' "
@@ -301,6 +288,22 @@ def fail_fallback(name: str, annrep: str, rep: str, ox: Oxentiel) -> None:
     err = f"{FAIL}: Argument '{name}' is not an instance of: '{annrep}' "
     err += f"Actual type: '{rep}'"
     handle_error(err, ox)
+
+
+def handle_error(err: str, ox: Oxentiel) -> None:
+    """ Either print or raise ``err``. """
+    if not ox.print_passes and hasattr(ox, "decorated"):
+        header = get_header(ox.decorated)
+        print(header)
+    if ox.raise_errors:
+        raise TypeError(err)
+    print(err)
+
+
+def handle_pass(msg: str, ox: Oxentiel) -> None:
+    """ Either print or raise ``err``. """
+    if ox.print_passes:
+        print(msg)
 
 
 def get_header(decorated) -> str:  # type: ignore[no-untyped-def]
