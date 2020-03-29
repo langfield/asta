@@ -1,14 +1,17 @@
-"""
-PRIVATE MODULE: do not import (from) it directly.
-
-This module contains class implementations.
-"""
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Supermetaclasses for ``_Array``-like asta types. """
 import types
 from abc import abstractmethod
-from typing import TypeVar, Generic, Any, Optional, Tuple, List
+from typing import TypeVar, Generic, Any, Optional, Tuple, List, Dict
 
 import numpy as np
+from oxentiel import Oxentiel
+
+from asta.utils import shape_repr
+from asta.config import get_ox
 from asta.scalar import Scalar
+from asta.constants import Printable
 
 # pylint: disable=too-few-public-methods
 
@@ -21,6 +24,7 @@ class GenericMeta(type, Generic[T]):
     kind: str
     shape: tuple
     dtype: Any
+    kwattrs: Dict[str, Any]
 
     @classmethod
     @abstractmethod
@@ -43,6 +47,8 @@ class SubscriptableMeta(GenericMeta):
     """
 
     DIM_TYPES: List[type]
+    NAME: str
+    OX: Oxentiel
 
     __args__: Any
     __origin__: Any
@@ -51,6 +57,12 @@ class SubscriptableMeta(GenericMeta):
         cls._hash = 0
         cls.__args__ = None
         cls.__origin__ = None
+
+    def __init__(cls, name: str, bases: Tuple[type, ...], attrs: Dict[str, Any]):
+        """ Initializes the configuration object if it doesn't already exist. """
+        super().__init__(name, bases, attrs)
+        ox = get_ox()
+        cls.OX = ox
 
     @classmethod
     @abstractmethod
@@ -96,6 +108,30 @@ class SubscriptableMeta(GenericMeta):
         if not getattr(cls, "_hash", None):
             cls._hash = hash("{}{}".format(cls.__origin__, cls.__args__))
         return cls._hash
+
+    def __repr__(cls) -> str:
+        """ String representation of class. """
+        assert hasattr(cls, "shape")
+        assert hasattr(cls, "dtype")
+        assert hasattr(cls, "kwattrs")
+        subscript: List[Any] = []
+        if cls.dtype is not None:
+            if cls.NAME == "Array":
+                printable_dtype = Printable(f"np.{cls.dtype.name}")
+                subscript.append(printable_dtype)
+            else:
+                subscript.append(cls.dtype)
+        if cls.shape is not None:
+            shape = tuple(cls.shape)
+            printable_shape = Printable(f"shape={shape_repr(shape)}")
+            subscript.append(printable_shape)
+        if cls.kwattrs is not None:
+            printable_kwattrs = Printable(f"attrs={cls.kwattrs}")
+            subscript.append(printable_kwattrs)
+
+        rep = f"<asta.{cls.NAME}{subscript}>"
+
+        return rep
 
     @staticmethod
     def get_shape(item: Tuple) -> Optional[Tuple]:

@@ -1,0 +1,1 @@
+""" Asta decorator examples. """

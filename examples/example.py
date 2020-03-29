@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ An example of using runtime typechecking decorator. """
 import os
 import torch

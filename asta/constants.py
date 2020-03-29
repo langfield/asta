@@ -1,8 +1,14 @@
-""" asta.constants """
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Constants and helper classes for asta types. """
 import datetime
-from typing import Dict, List, Any
+from typing import Dict, List, Union, Any
+
 import numpy as np
-from asta.dims import Placeholder
+from sympy.core.expr import Expr
+from sympy.core.symbol import Symbol
+
+from asta.placeholder import Placeholder
 
 _TORCH_IMPORTED = False
 try:
@@ -13,7 +19,7 @@ except ImportError:
     pass
 _TENSORFLOW_IMPORTED = False
 try:
-    import tensorflow
+    import tensorflow as tf
 
     _TENSORFLOW_IMPORTED = True
 except ImportError:
@@ -49,6 +55,28 @@ class TorchModule:
         self.uint8 = NonInstanceType
 
 
+class DTypes:
+    """ A dummy dtypes attribute object for when tf is not installed. """
+
+    def __init__(self) -> None:
+        self.DType = NonInstanceType
+
+
+class TFModule:
+    """ A dummy tensorflow module for when tf is not installed. """
+
+    def __init__(self) -> None:
+        self.Tensor = NonInstanceType
+        self.TensorShape = NonInstanceType
+        self.dtypes = DTypes()
+        self.dtypes.DType = NonInstanceType
+        self.int64 = NonInstanceType
+        self.float64 = NonInstanceType
+        self.bool = NonInstanceType
+        self.complex128 = NonInstanceType
+        self.string = NonInstanceType
+
+
 class ScalarMeta(type):
     """ A meta class for the ``Scalar`` class. """
 
@@ -69,6 +97,17 @@ class ScalarMeta(type):
         return False
 
 
+class Printable:
+    """ Class for printing object representations in nested objects. """
+
+    def __init__(self, rep: str):
+        self.rep = rep
+
+    def __repr__(self) -> str:
+        """ Just return ``rep``. """
+        return self.rep
+
+
 class Color:
     """ Terminal color string literals. """
 
@@ -86,10 +125,11 @@ class Color:
 
 if not _TORCH_IMPORTED:
     torch = TorchModule()
-
+    tf = TFModule()
 
 # Types.
-ARRAY_TYPES: List[type] = [np.ndarray, torch.Tensor]
+GenericArray = Union[np.ndarray, torch.Tensor, tf.Tensor]
+ARRAY_TYPES: List[type] = [np.ndarray, torch.Tensor, tf.Tensor]
 GENERIC_TYPES: List[type] = [
     bool,
     int,
@@ -102,44 +142,61 @@ GENERIC_TYPES: List[type] = [
 ]
 NoneType = type(None)
 EllipsisType = type(Ellipsis)
-NUMPY_DIM_TYPES: List[type] = [
+
+CORE_DIM_TYPES: List[type] = [
     int,
     ScalarMeta,
     EllipsisType,
     NoneType,  # type: ignore[misc]
     tuple,
     Placeholder,
+    Expr,
+    Symbol,
 ]
-TORCH_DIM_TYPES: List[type] = [
-    int,
-    ScalarMeta,
-    EllipsisType,
-    NoneType,  # type: ignore[misc]
-    tuple,
-    torch.Size,
-    Placeholder,
-]
+NUMPY_DIM_TYPES: List[type] = CORE_DIM_TYPES
+TORCH_DIM_TYPES: List[type] = CORE_DIM_TYPES + [torch.Size]
+TF_DIM_TYPES: List[type] = CORE_DIM_TYPES + [tf.TensorShape]
+ALL_DIM_TYPES: List[type] = CORE_DIM_TYPES + [torch.Size, tf.TensorShape]
 NP_UNSIZED_TYPE_KINDS: Dict[type, str] = {bytes: "S", str: "U", object: "O"}
-NP_GENERIC_TYPES: List[type] = [
-    bool,
-    int,
-    float,
-    complex,
-    bytes,
-    str,
-    object,
-    np.datetime64,
-    np.timedelta64,
-]
-TORCH_GENERIC_TYPES: List[type] = [
-    bool,
-    int,
-    float,
-    bytes,
-]
 TORCH_DTYPE_MAP: Dict[type, torch.dtype] = {
     int: torch.int32,
     float: torch.float32,
     bool: torch.bool,
     bytes: torch.uint8,
 }
+TF_DTYPE_MAP: Dict[type, tf.dtypes.DType] = {
+    int: tf.int32,
+    float: tf.float32,
+    complex: tf.complex128,
+    bool: tf.bool,
+    bytes: tf.string,
+    str: tf.string,
+}
+TF_DTYPES = [
+    tf.bfloat16,
+    tf.bool,
+    tf.complex,
+    tf.complex128,
+    tf.complex64,
+    tf.double,
+    tf.float16,
+    tf.float32,
+    tf.float64,
+    tf.half,
+    tf.int16,
+    tf.int32,
+    tf.int64,
+    tf.int8,
+    tf.qint16,
+    tf.qint32,
+    tf.qint8,
+    tf.quint16,
+    tf.quint8,
+    tf.resource,
+    tf.string,
+    tf.uint16,
+    tf.uint32,
+    tf.uint64,
+    tf.uint8,
+    tf.variant,
+]

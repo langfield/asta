@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """ Custom hypothesis test strategies for asta. """
 from typing import Any, Callable
 

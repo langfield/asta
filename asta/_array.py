@@ -7,7 +7,7 @@ from typing import List, Optional, Any, Tuple, Dict, Union
 
 import numpy as np
 
-from asta.utils import get_shape_rep, shapecheck
+from asta.utils import shapecheck, attrcheck
 from asta.parser import parse_subscript
 from asta.classes import SubscriptableMeta, GenericMeta
 from asta.constants import (
@@ -25,6 +25,7 @@ class _ArrayMeta(SubscriptableMeta):
     kind: str
     shape: tuple
     dtype: np.dtype
+    kwattrs: Dict[str, Any]
 
     @classmethod
     @abstractmethod
@@ -50,28 +51,12 @@ class _ArrayMeta(SubscriptableMeta):
             return False
         return True
 
-    def __repr__(cls) -> str:
-        """ String representation of ``Array`` class. """
-        assert hasattr(cls, "shape")
-        assert hasattr(cls, "dtype")
-        if cls.shape is None and cls.dtype is None:
-            rep = f"<asta.Array>"
-        elif cls.shape is None and cls.dtype is not None:
-            rep = f"<asta.Array[{cls.dtype}]>"
-        elif cls.shape is not None and cls.dtype is None:
-            shape_rep = get_shape_rep(cls.shape)
-            rep = f"<asta.Array[{shape_rep}]>"
-        else:
-            shape_rep = get_shape_rep(cls.shape)
-            rep = f"<asta.Array[{cls.dtype}, {shape_rep}]>"
-
-        return rep
-
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<array>, Array[<args>])``. """
         assert hasattr(cls, "kind")
         assert hasattr(cls, "shape")
         assert hasattr(cls, "dtype")
+        assert hasattr(cls, "kwattrs")
         match = False
         if isinstance(inst, np.ndarray):
             match = True  # In case of an empty array or no ``cls.kind``.
@@ -86,8 +71,10 @@ class _ArrayMeta(SubscriptableMeta):
                 match = False
 
             # Handle ellipses.
-            elif cls.shape is not None:
-                match = shapecheck(inst.shape, cls.shape)
+            else:
+                shape_match, _ = shapecheck(inst.shape, cls.shape)
+                attr_match, _ = attrcheck(inst, cls.kwattrs)
+                match = shape_match and attr_match
 
         return match
 
@@ -95,12 +82,14 @@ class _ArrayMeta(SubscriptableMeta):
 class _Array(metaclass=_ArrayMeta):
     """ This class exists to keep the Array class as clean as possible. """
 
+    NAME: str = "Array"
     DIM_TYPES: List[type] = NUMPY_DIM_TYPES
     _UNSIZED_TYPE_KINDS: Dict[type, str] = NP_UNSIZED_TYPE_KINDS
 
     kind: str = ""
     dtype: Optional[np.dtype] = None
     shape: Optional[Tuple] = None
+    kwattrs: Optional[Dict[str, Any]] = None
 
     def __new__(cls, *args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         raise TypeError("Cannot instantiate abstract class 'Array'.")
@@ -135,7 +124,8 @@ class _Array(metaclass=_ArrayMeta):
         cls, item: Union[type, Optional[Union[int, EllipsisType]]]  # type: ignore
     ) -> None:
         """ Set class attributes based on the passed dtype/dim data. """
-        dtype, shape, kind = parse_subscript(cls, item, np.dtype)
+        dtype, shape, kwattrs, kind = parse_subscript(cls, item, np.dtype)
         cls.dtype = dtype
         cls.shape = shape
+        cls.kwattrs = kwattrs
         cls.kind = kind

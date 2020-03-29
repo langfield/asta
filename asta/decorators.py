@@ -1,90 +1,70 @@
-"""
-PRIVATE MODULE: do not import (from) it directly.
-
-This module contains decorators.
-"""
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+""" Defines the ``@typechecked`` decorator. """
 import os
 import inspect
-from typing import Any, Tuple, Dict
+from typing import Any, Tuple, Dict, Set
 
-import numpy as np
+from sympy.core.expr import Expr
 
-import asta.dims
-from asta.dims import Placeholder
-from asta.array import Array
-from asta._array import _ArrayMeta
-from asta.classes import SubscriptableMeta
-from asta.constants import torch, Color, _TORCH_IMPORTED
+from oxentiel import Oxentiel
 
-
-METAMAP: Dict[type, Any] = {_ArrayMeta: Array}
-if _TORCH_IMPORTED:
-    from asta.tensor import Tensor
-    from asta._tensor import _TensorMeta
-
-    METAMAP[_TensorMeta] = Tensor
+from asta.utils import astasolver
+from asta.config import get_ox
+from asta.origins import check_annotation
+from asta.display import (
+    fail_system,
+    get_header,
+    handle_pass,
+)
 
 
-def refresh(annotation: SubscriptableMeta) -> SubscriptableMeta:
-    """ Load an asta type annotation containing placeholders. """
-    dtype = annotation.dtype
-    shape = annotation.shape
-    dimvars = []
+def validate_annotations(  # type: ignore[no-untyped-def]
+    decorated, annotations: Dict[str, Any], args: Tuple[Any], kwargs: Dict[str, Any],
+) -> Dict[str, Any]:
+    """
+    Make sure there is an annotation for each parameter, return arguments in
+    args other than class references (self, cls, mcs), and keyword arguments in
+    kwargs with defaults filled in.
+    """
+    num_annots = len(annotations)
+    num_non_return_annots = num_annots
+    if "return" in annotations:
+        num_non_return_annots -= 1
 
-    if annotation.shape is not None:
-        for dim in annotation.shape:
-            if isinstance(dim, Placeholder):
-                placeholder = dim
-                dimvar = getattr(asta.dims, placeholder.name)
+    # Get the parameter list from the function signature.
+    sig = inspect.signature(decorated)
+    paramlist = list(sig.parameters)
 
-                # Handle case where placeholder is unpacked in annotation.
-                if placeholder.unpacked:
-                    for elem in dimvar:
-                        dimvars.append(elem)
-                else:
-                    dimvars.append(dimvar)
-            else:
-                dimvars.append(dim)
-        assert len(dimvars) == len(shape)
-        shape = tuple(dimvars)
+    # Get a list of kwargs with defaults filled-in.
+    defaults: Dict[str, Any] = {}
+    for k, v in sig.parameters.items():
+        if v.default is not inspect.Parameter.empty:
+            defaults[k] = v.default
 
-    # Note we're guaranteed that ``annotation`` has type ``SubscriptableMeta``.
-    subscriptable_class = METAMAP[type(annotation)]
+    checkable_args: Dict[str, Any] = defaults.copy()
+    checkable_args.update(kwargs)
 
-    if shape is not None:
-        annotation = subscriptable_class[dtype, shape]
-    else:
-        annotation = subscriptable_class[dtype]
+    # Remove unannotated instance/class/metaclass reference.
+    pure_args = args
+    refs = ("self", "cls", "mcs")
 
-    return annotation
+    if len(sig.parameters) == num_non_return_annots + 1 and paramlist[0] in refs:
+        pure_args = pure_args[1:]  # type: ignore[assignment]
+    for i, arg in enumerate(pure_args):
+        name = list(annotations.keys())[i]
+        checkable_args[name] = arg
 
+    # Check for mismatch between lengths of arguments/annotations.
+    if num_non_return_annots != len(checkable_args):
+        num_annot_err = f"Mismatch between number of annotated "
+        num_annot_err += f"non-(self / cls / mcs) parameters "
+        num_annot_err += f"'({num_non_return_annots})' and number of arguments "
+        num_annot_err += f"'({len(checkable_args)})'. "
+        num_annot_err += f"There may be a type annotation missing."
+        raise TypeError(num_annot_err)
 
-def type_representation(arg: Any) -> str:
-    """ Get a string representation of an argument including dtype and shape. """
-    rep = repr(type(arg))
-    if hasattr(arg, "shape"):
-        shape = arg.shape
-    if hasattr(arg, "dtype"):
-        dtype = arg.dtype
-    if isinstance(arg, np.ndarray):
-        astatype = Array[dtype, shape]  # type: ignore[valid-type, type-arg]
-        rep = repr(astatype).replace("asta", "numpy")
-    elif isinstance(arg, torch.Tensor):
-        astatype = Tensor[dtype, shape]  # type: ignore
-        rep = repr(astatype).replace("asta", "torch")
-    return rep
-
-
-def pass_return(i: int, ann: SubscriptableMeta, rep: str) -> None:
-    """ Print typecheck pass notification for return values. """
-    passed = f"{Color.GREEN}PASSED{Color.END}"
-    print(f"{passed}: Return {i} matched return type '{ann}' with actual type: '{rep}'")
-
-
-def pass_argument(name: str, ann: SubscriptableMeta, rep: str) -> None:
-    """ Print typecheck pass notification for return values. """
-    passed = f"{Color.GREEN}PASSED{Color.END}"
-    print(f"{passed}: Arg '{name}' matched parameter '{ann}' with actual type: '{rep}'")
+    return checkable_args
 
 
 def typechecked(decorated):  # type: ignore[no-untyped-def]
@@ -105,102 +85,88 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
     _wrapper : ``Callable[[Any], Any]``.
         The decorated version of ``decorated``.
     """
+    ox: Oxentiel = get_ox()
+    if "ASTA_TYPECHECK" in os.environ:
+        ox.on = ox.on and os.environ["ASTA_TYPECHECK"] == "1"
+    if not ox.on:
+        return decorated
+
+    # Treat classes.
+    if inspect.isclass(decorated):
+
+        # Grab the module name.
+        prefix = decorated.__qualname__ + "."
+
+        # Iterate over attributes.
+        for key, attr in decorated.__dict__.items():
+
+            # If it's decoratable.
+            if (
+                inspect.isfunction(attr)
+                or inspect.ismethod(attr)
+                or inspect.isclass(attr)
+            ):
+                # If the name prefix matches and it has annotations.
+                if attr.__qualname__.startswith(prefix) and getattr(
+                    attr, "__annotations__", None
+                ):
+
+                    # Decorate the method/function/class.
+                    setattr(decorated, key, typechecked(attr))
+
+            # Only for class and staticmethods; instance methods are caught above.
+            elif isinstance(attr, (classmethod, staticmethod)):
+
+                # If the underlying function has annotations.
+                if getattr(attr.__func__, "__annotations__", None):
+                    wrapped = typechecked(attr.__func__)
+
+                    # Re-wrap with ``classmethod`` or ``staticmethod`` and put back.
+                    setattr(decorated, key, type(attr)(wrapped))
+
+        return decorated
 
     def _wrapper(*args: Tuple[Any], **kwargs: Dict[str, Any]) -> Any:
         """ Decorated/typechecked function. """
 
-        # Print the typecheck header.
-        fn_rep = f"{Color.BOLD}{decorated.__module__}.{decorated.__name__}(){Color.END}"
-        header = f"<asta::@typechecked::{fn_rep}>"
-        min_pad_size = 10
-        pad_size = 80 - len(header)
-        side_size = max(pad_size // 2, min_pad_size)
-        pad_parity = pad_size % 2 if side_size > 10 else 0
-        left_padding = "=" * side_size
-        right_padding = "=" * (side_size + pad_parity)
-        print(f"{left_padding}{header}{right_padding}")
+        # Print header for ``decorated``.
+        ox.decorated = decorated
+        header: str = get_header(decorated)
+        handle_pass(header, ox)
 
-        # Get number of non-return annotations.
-        annotations = decorated.__annotations__
-        num_annots = len(annotations)
-        num_non_return_annots = num_annots
-        if "return" in annotations:
-            num_non_return_annots -= 1
+        equations: Set[Expr] = set()
+        annotations: Dict[str, Any] = decorated.__annotations__
+        checkable_args: Dict[str, Any] = validate_annotations(
+            decorated,
+            annotations,
+            args,  # type: ignore
+            kwargs,
+        )
 
-        # Get the parameter list from the function signature.
-        sig = inspect.signature(decorated)
-        paramlist = list(sig.parameters)
-
-        # Get a list of kwargs with defaults filled-in.
-        defaults: Dict[str, Any] = {}
-        for k, v in sig.parameters.items():
-            if v.default is not inspect.Parameter.empty:
-                defaults[k] = v.default
-        filled_kwargs: Dict[str, Any] = defaults.copy()
-        filled_kwargs.update(kwargs)
-
-        # Remove unannotated instance/class/metaclass reference.
-        checkable_args = args
-        refs = ("self", "cls", "mcs")
-        if len(sig.parameters) == num_non_return_annots + 1 and paramlist[0] in refs:
-            checkable_args = checkable_args[1:]
-
-        # Check for mismatch between lengths of arguments/annotations.
-        num_args = len(checkable_args) + len(filled_kwargs)
-        if num_non_return_annots != num_args:
-            num_annot_err = f"Mismatch between number of annotated "
-            num_annot_err += f"non-(self / cls / mcs) parameters "
-            num_annot_err += f"'({num_non_return_annots})' and number of arguments "
-            num_annot_err += f"'({num_args})'. There may be a type annotation missing."
-            raise TypeError(num_annot_err)
-
-        # Check positional arguments.
-        for i, arg in enumerate(checkable_args):
-            name = list(annotations.keys())[i]
+        # Check arguments.
+        for name, arg in checkable_args.items():
             annotation = annotations[name]
-            if isinstance(annotation, SubscriptableMeta):
-                annotation = refresh(annotation)
-                rep = type_representation(arg)
-                if not isinstance(arg, annotation):
-                    type_err = f"Argument value for parameter '{name}' "
-                    type_err += f"has wrong type. Expected type: '{annotation}' "
-                    type_err += f"Actual type: '{rep}'"
-                    raise TypeError(type_err)
-                pass_argument(name, annotation, rep)
+            equations = check_annotation(name, arg, annotation, equations, ox)
+            del annotation
 
-        # Check keyword arguments.
-        for name, kwarg in filled_kwargs.items():
-            annotation = annotations[name]
-            if isinstance(annotation, SubscriptableMeta):
-                annotation = refresh(annotation)
-                rep = type_representation(kwarg)
-                if not isinstance(kwarg, annotation):
-                    type_err = f"Argument value for parameter '{name}' "
-                    type_err += f"has wrong type. Expected type: '{annotation}' "
-                    type_err += f"Actual type: '{rep}'"
-                    raise TypeError(type_err)
-                pass_argument(name, annotation, rep)
+        # Call the decorated function.
+        ret = decorated(*args, **kwargs)
 
         # Check return.
-        ret = decorated(*args, **kwargs)
-        return_annotation = annotations["return"]
-        if isinstance(return_annotation, SubscriptableMeta):
-            return_annotation = refresh(return_annotation)
-            rep = type_representation(ret)
-            if not isinstance(ret, return_annotation):
-                type_err = f"Return value has wrong type. "
-                type_err += f"Expected type: '{return_annotation}' "
-                type_err += f"Actual type: '{rep}'"
-                raise TypeError(type_err)
-            pass_return(0, return_annotation, rep)
+        ox.decorated = decorated
+        if "return" in annotations:
+            annotation = annotations["return"]
+            equations = check_annotation("return", ret, annotation, equations, ox)
+            del annotation
 
-        # TODO: Treat tuples, lists, sequences recursively.
+        # Solve our system of equations if it is nonempty.
+        solvable, symbols, solutions = astasolver(equations)
+        if not solvable:
+            fail_system(equations, symbols, solutions, ox)
 
         return ret
 
     _wrapper.__module__ = decorated.__module__
     _wrapper.__name__ = decorated.__name__
 
-    if "ASTA_TYPECHECK" in os.environ and os.environ["ASTA_TYPECHECK"] == "1":
-        return _wrapper
-    return decorated
+    return _wrapper
