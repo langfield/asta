@@ -12,6 +12,17 @@ adds a decorator, ``@typechecked``, which implements toggleable static type
 enforcement for the classes described above.
 
 
+Installation
+------------
+Install with:
+
+$ pip install asta
+
+or
+
+$ pip install git+git://github.com/brendanxwhitaker/asta.git
+
+
 Basics
 ------
 Asta supports checking dtypes and/or shapes with wildcards and ellipses:
