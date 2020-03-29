@@ -8,7 +8,6 @@ from typing import List, Dict, Tuple, Union, Any, Set, Optional
 from sympy import solvers, simplify
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
-from sympy.core.numbers import Number
 from asta.constants import (
     EllipsisType,
     NonInstanceType,
@@ -199,16 +198,8 @@ def astasolver(
         symbols = symbols.union(equation.free_symbols)
     solutions: List[Dict[Symbol, int]] = solvers.solve(equations, symbols, dict=True)
 
-    # Remove symbolic solutions, e.g. ``X = Y``.
-    pruned_solutions: List[Dict[Symbol, Expr]] = []
-    for solution in solutions:
-        all_numbers = True
-        for _key, val in solution.items():
-            if not isinstance(val, Number):
-                all_numbers = False
-                break
-        if all_numbers:
-            pruned_solutions.append(solution)
+    # Removed pruning of symbolic solutions.
+    pruned_solutions: List[Dict[Symbol, Expr]] = solutions
 
     # If we don't get at least one solution, it's not a match.
     return len(pruned_solutions) >= 1, symbols, pruned_solutions

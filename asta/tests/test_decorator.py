@@ -18,6 +18,7 @@ from asta.tests import hpt
 os.environ["ASTA_TYPECHECK"] = "1"
 
 X = symbols.X
+Y = symbols.Y
 D = dims.D
 S1 = shapes.S1
 S2 = shapes.S2
@@ -216,6 +217,14 @@ def subscript_summation_3(_t: Tensor[S1 + (1 + D,)]):
     """ Test function. """
 
 
+@typechecked
+def concatenation(
+    a: Array[float, (1, 2, X)], b: Array[float, (1, 2, Y)]
+) -> Array[float, (1, 2, X + Y)]:
+    """ Test function. """
+    return np.concatenate((a, b), axis=2)
+
+
 def test_np_typechecked():
     """ Test that decorator raises a TypeError when argument is wrong. """
     arr = np.zeros((1, 1))
@@ -329,3 +338,10 @@ def test_shape_arithmetic() -> None:
         subscript_summation_2(t_8)
     with pytest.raises(TypeError):
         subscript_summation_3(t_9)
+
+
+def test_symbol_arithmetic() -> None:
+    """ Tests that symbols play nicely together. """
+    a = np.ones((1, 2, 3))
+    b = np.ones((1, 2, 4))
+    concatenation(a, b)
