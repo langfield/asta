@@ -147,6 +147,7 @@ class Color:
 
 if not _TORCH_IMPORTED:
     torch = TorchModule()
+if not _TENSORFLOW_IMPORTED:
     tf = TFModule()
 
 # Types.

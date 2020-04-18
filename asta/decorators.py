@@ -61,7 +61,9 @@ def validate_annotations(  # type: ignore[no-untyped-def]
         num_annot_err += f"non-(self / cls / mcs) parameters "
         num_annot_err += f"'({num_non_return_annots})' and number of arguments "
         num_annot_err += f"'({len(checkable_args)})'. "
-        num_annot_err += f"There may be a type annotation missing."
+        num_annot_err += f"Possible causes: wrong number of arguments, or missing"
+        num_annot_err += f"type hint."
+
         raise TypeError(num_annot_err)
 
     return checkable_args
