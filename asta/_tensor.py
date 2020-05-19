@@ -44,6 +44,10 @@ class _TensorMeta(SubscriptableMeta):
             return False
         return True
 
+    def __hash__(cls) -> int:
+        """ Just calls __hash__ of SubscriptableMeta. """
+        return super().__hash__()
+
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<tensor>, Tensor[<args>])``. """
         assert hasattr(cls, "shape")

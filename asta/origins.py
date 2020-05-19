@@ -58,7 +58,7 @@ from asta.display import (
     fail_too_few_args,
     fail_fallback,
 )
-from asta.constants import torch, tf, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
+from asta.constants import torch, tf, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED, NoneType
 from asta.substitution import substitute
 
 METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
@@ -427,7 +427,7 @@ def check_union(
         try:
             equations = check_annotation(name, value, type_, equations, ox)
             return equations
-        except TypeError:
+        except TypeError as _err:
             pass
 
     typelist = ", ".join(get_type_name(t) for t in union_params)
@@ -482,6 +482,12 @@ def check_literal(name: str, value: Any, annotation: Any, ox: Oxentiel) -> None:
     """ Typecheck a value annotated with ``Literal[*]``. """
     if value not in annotation.__args__:
         fail_literal(name, annotation.__args__, value, ox)
+
+
+def check_none(name: str, value: Any, annotation: Any, ox: Oxentiel) -> None:
+    """ Typecheck a value annotated with ``NoneType``. """
+    if value is not None:
+        fail_literal(name, None, value, ox)
 
 
 # Equality checks are applied to these.
@@ -557,6 +563,8 @@ def check_annotation(
             equations = check_tuple(name, value, annotation, equations, ox)
         elif issubclass(annotation, dict) and hasattr(annotation, "__annotations__"):
             equations = check_typed_dict(name, value, annotation, equations, ox)
+        elif annotation == NoneType:
+            check_none(name, value, annotation, ox)
         elif ox.check_non_asta_types:
             if issubclass(annotation, (float, complex)):
                 check_number(name, value, annotation, ox)

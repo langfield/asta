@@ -105,8 +105,11 @@ class SubscriptableMeta(GenericMeta):
         return eq
 
     def __hash__(cls) -> int:
+        assert hasattr(cls, "shape")
+        assert hasattr(cls, "dtype")
+        assert hasattr(cls, "kwattrs")
         if not getattr(cls, "_hash", None):
-            cls._hash = hash("{}{}".format(cls.__origin__, cls.__args__))
+            cls._hash = hash(f"{cls.shape}{cls.dtype}{cls.kwattrs}")
         return cls._hash
 
     def __repr__(cls) -> str:

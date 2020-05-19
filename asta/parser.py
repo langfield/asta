@@ -81,6 +81,7 @@ def parse_subscript(
             shape = SubscriptableMeta.get_shape(item)
 
     else:
+        # TODO: Update this error message.
         empty_err = "Argument to '{cls.NAME}[]' cannot be empty tuple. "
         empty_err += "Use '{cls.NAME}[None]' to indicate a scalar."
         raise TypeError(empty_err)
