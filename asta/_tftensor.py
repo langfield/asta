@@ -36,6 +36,7 @@ class _TFTensorMeta(SubscriptableMeta):
         """ Defer to the metaclass which calls ``cls._after_subscription()``. """
         return SubscriptableMeta.__getitem__(cls, item)
 
+    # TODO: Include kwattrs for each of these classes.
     def __eq__(cls, other: Any) -> bool:
         """ If the dtypes and shapes match, they should be equal. """
         if not isinstance(other, _TFTensorMeta):
@@ -43,6 +44,10 @@ class _TFTensorMeta(SubscriptableMeta):
         if cls.shape != other.shape or cls.dtype != other.dtype:
             return False
         return True
+
+    def __hash__(cls) -> int:
+        """ Just calls __hash__ of SubscriptableMeta. """
+        return super().__hash__()
 
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<tensor>, TFTensor[<args>])``. """

@@ -43,7 +43,8 @@ def parse_subscript(
     shape: Optional[Tuple] = cls.shape
     kwattrs: Optional[Dict[str, Any]] = cls.kwattrs
 
-    if isinstance(item, (type, dtype_metaclass)) and item != Scalar:
+    isscalar = hash(item) == hash(Scalar)
+    if isinstance(item, (type, dtype_metaclass)) and not isscalar:
         dtype, kind = cls.get_dtype(item)
         shape = None
 
@@ -67,7 +68,8 @@ def parse_subscript(
     elif item:
 
         # Case where generic type is specified.
-        if isinstance(item[0], (type, dtype_metaclass)) and item[0] != Scalar:
+        isscalar = hash(item[0]) == hash(Scalar)
+        if isinstance(item[0], (type, dtype_metaclass)) and not isscalar:
             dtype, kind = cls.get_dtype(item[0])
             item = item[1:]
 

@@ -51,6 +51,10 @@ class _ArrayMeta(SubscriptableMeta):
             return False
         return True
 
+    def __hash__(cls) -> int:
+        """ Just calls __hash__ of SubscriptableMeta. """
+        return super().__hash__()
+
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<array>, Array[<args>])``. """
         assert hasattr(cls, "kind")

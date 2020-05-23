@@ -151,6 +151,11 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
             equations = check_annotation(name, arg, annotation, equations, ox)
             del annotation
 
+        # Solve our system of equations if it is nonempty.
+        solvable, symbols, solutions = astasolver(equations)
+        if not solvable:
+            fail_system(equations, symbols, solutions, ox)
+
         # Call the decorated function.
         ret = decorated(*args, **kwargs)
 
