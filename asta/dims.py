@@ -2,14 +2,19 @@
 # -*- coding: utf-8 -*-
 """ A module for programmatically storing dimension sizes for annotations. """
 import sys
-from typing import Dict, Optional, Any, Union
+from typing import Any, Dict, Union, Optional
+
 from sympy import symbols
 from sympy.core.symbol import Symbol
+
+from asta.constants import PYATTRS, NoneType, ModuleType
 
 # pylint: disable=redefined-outer-name, too-few-public-methods, no-self-use
 
 # Dummy map to trick pylint.
 symbol_map: Dict[Symbol, Optional[int]] = {}
+
+FILELOADER = Any
 
 
 def __getattr__(name: str) -> Any:
@@ -27,7 +32,20 @@ class Dimensions:
         # After initialization, setting attributes is the same as setting an item.
         self.__initialized = True
 
-    def __getattr__(self, name: str) -> Union[Symbol, int]:
+    def __getattr__(
+        self, name: str
+    ) -> Union[  # type: ignore[valid-type]
+        Symbol, int, str, dict, NoneType, ModuleType, FILELOADER,
+    ]:
+
+        # Don't return sympy symbols for native module attributes.
+        if name in PYATTRS:
+            if name not in globals():
+                raise AttributeError
+            attr = globals()[name]
+            return attr
+
+        # Handle everything else as a symbol.
         symbol = symbols(name)
         if symbol not in self.symbol_map:
             self.symbol_map[symbol] = None

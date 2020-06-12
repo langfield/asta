@@ -3,18 +3,14 @@
 """ This module contains meta functionality for the ``Array`` type. """
 import datetime
 from abc import abstractmethod
-from typing import List, Optional, Any, Tuple, Dict, Union
+from typing import Any, Dict, List, Tuple, Union, Optional
 
 import numpy as np
 
-from asta.utils import shapecheck, attrcheck
+from asta.utils import attrcheck, shapecheck
 from asta.parser import parse_subscript
-from asta.classes import SubscriptableMeta, GenericMeta
-from asta.constants import (
-    EllipsisType,
-    NUMPY_DIM_TYPES,
-    NP_UNSIZED_TYPE_KINDS,
-)
+from asta.classes import GenericMeta, SubscriptableMeta
+from asta.constants import NUMPY_DIM_TYPES, NP_UNSIZED_TYPE_KINDS, EllipsisType
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
 
@@ -50,6 +46,10 @@ class _ArrayMeta(SubscriptableMeta):
         if cls.shape != other.shape or cls.dtype != other.dtype:
             return False
         return True
+
+    def __hash__(cls) -> int:
+        """ Just calls __hash__ of SubscriptableMeta. """
+        return super().__hash__()
 
     def __instancecheck__(cls, inst: Any) -> bool:
         """ Support expected behavior for ``isinstance(<array>, Array[<args>])``. """

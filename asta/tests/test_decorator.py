@@ -4,15 +4,14 @@
 """ Test the ``asta.typechecked`` decorator. """
 import os
 import functools
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
+import numpy as np
 import torch
 import pytest
-import numpy as np
-
 from hypothesis import given
 
-from asta import Array, Tensor, typechecked, symbols, dims, shapes
+from asta import Array, Tensor, dims, shapes, symbols, typechecked
 from asta.tests import hpt
 
 os.environ["ASTA_TYPECHECK"] = "1"
@@ -156,6 +155,14 @@ def list_generic(l: List[Tensor[float, 1, 2, 3]]) -> Tensor[float, 1, 2, 3]:
 
 
 @typechecked
+def optional_generic(
+    t: Optional[Tensor[float, 1, 2, 3]] = None
+) -> Optional[Tensor[float, 1, 2, 3]]:
+    """ Test function. """
+    return t
+
+
+@typechecked
 def tuple_generic(
     tup: Tuple[Tensor[float, 8, 32], Tensor[float, 8, 64]]
 ) -> Tuple[Tensor[float, 8, 32], Tensor[float, 8, 96]]:
@@ -289,6 +296,8 @@ def test_subscriptable_generics():
     good_tuple = (torch.ones((8, 32)), torch.ones((8, 64)))
     bad_tuple = (torch.ones((16, 32)), torch.ones((16, 64)))
     bigger_tuple = (torch.ones((8, 74)), torch.ones((8, 148)))
+    good_optional = torch.ones((1, 2, 3))
+    bad_optional = torch.ones((1, 2))
     list_generic(good_list)
     with pytest.raises(TypeError):
         list_generic(bad_list)
@@ -296,6 +305,10 @@ def test_subscriptable_generics():
     tuple_generic_inference(bigger_tuple)
     with pytest.raises(TypeError):
         tuple_generic(bad_tuple)
+    optional_generic(good_optional)
+    optional_generic()
+    with pytest.raises(TypeError):
+        optional_generic(bad_optional)
 
 
 def test_placeholder_arithmetic():

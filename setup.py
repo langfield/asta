@@ -63,7 +63,7 @@ def read(fname: str) -> str:
 
 setup(
     name="asta",
-    version="0.0.6a1",
+    version="0.0.7",
     author="Brendan Whitaker",
     description=("Shape annotations for homogeneous numpy arrays and pytorch/tensorflow tensors."),
     license="GPLv3",

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # type: ignore
 """ Tests for the 'TFTensor' typing class. """
-from typing import Tuple, List
+from typing import List, Tuple
 
 import pytest
 import tensorflow as tf
@@ -10,7 +10,7 @@ import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 from hypothesis import given, assume
 
-from asta import TFTensor, Scalar
+from asta import Scalar, TFTensor
 from asta.tests import htf
 from asta.utils import rand_split_shape
 

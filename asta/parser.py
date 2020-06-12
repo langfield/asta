@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ This module contains a general subscript parser for subscriptable types. """
-from typing import Optional, Tuple, Union, Dict, Any
+from typing import Any, Dict, Tuple, Union, Optional
 
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
@@ -43,7 +43,8 @@ def parse_subscript(
     shape: Optional[Tuple] = cls.shape
     kwattrs: Optional[Dict[str, Any]] = cls.kwattrs
 
-    if isinstance(item, (type, dtype_metaclass)) and item != Scalar:
+    isscalar = hash(item) == hash(Scalar)
+    if isinstance(item, (type, dtype_metaclass)) and not isscalar:
         dtype, kind = cls.get_dtype(item)
         shape = None
 
@@ -67,7 +68,8 @@ def parse_subscript(
     elif item:
 
         # Case where generic type is specified.
-        if isinstance(item[0], (type, dtype_metaclass)) and item[0] != Scalar:
+        isscalar = hash(item[0]) == hash(Scalar)
+        if isinstance(item[0], (type, dtype_metaclass)) and not isscalar:
             dtype, kind = cls.get_dtype(item[0])
             item = item[1:]
 
@@ -81,6 +83,7 @@ def parse_subscript(
             shape = SubscriptableMeta.get_shape(item)
 
     else:
+        # TODO: Update this error message.
         empty_err = "Argument to '{cls.NAME}[]' cannot be empty tuple. "
         empty_err += "Use '{cls.NAME}[None]' to indicate a scalar."
         raise TypeError(empty_err)

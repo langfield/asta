@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """ Constants and helper classes for asta types. """
 import datetime
-from typing import Dict, List, Union, Any
+from typing import Any, Dict, List, Union
 
 import numpy as np
 from sympy.core.expr import Expr
@@ -28,6 +28,19 @@ except ImportError:
 
 # pylint: disable=invalid-name, too-few-public-methods
 
+# Python built-in magic attribute names.
+PYATTRS = [
+    "__all__",
+    "__name__",
+    "__doc__",
+    "__package__",
+    "__loader__",
+    "__spec__",
+    "__annotations__",
+    "__builtins__",
+    "__file__",
+    "__cached__",
+]
 
 # Classes and metaclasses.
 class NonInstanceMeta(type):
@@ -147,6 +160,7 @@ class Color:
 
 if not _TORCH_IMPORTED:
     torch = TorchModule()
+if not _TENSORFLOW_IMPORTED:
     tf = TFModule()
 
 # Types.
@@ -163,13 +177,14 @@ GENERIC_TYPES: List[type] = [
     datetime.timedelta,
 ]
 NoneType = type(None)
+ModuleType = type(datetime)
 EllipsisType = type(Ellipsis)
 
 CORE_DIM_TYPES: List[type] = [
     int,
     ScalarMeta,
     EllipsisType,
-    NoneType,  # type: ignore[misc]
+    NoneType,  # type: ignore[list-item]
     tuple,
     Placeholder,
     Expr,

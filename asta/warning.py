@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 """ Prints a warning if typechecking will be silent. """
 import os
+
 from oxentiel import Oxentiel
+
 from asta.config import get_ox
 from asta.constants import Color
 

@@ -2,11 +2,15 @@
 # -*- coding: utf-8 -*-
 """ A module for programmatically storing dimension sizes for annotations. """
 import sys
-from typing import Dict, Any, Union, Tuple
+from typing import Any, Dict, Tuple, Union
+
+from asta.constants import PYATTRS, NoneType, ModuleType
 from asta.placeholder import Placeholder
 
 # pylint: disable=redefined-outer-name, too-few-public-methods
 # pylint: disable=no-self-use, too-many-ancestors
+
+FILELOADER = Any
 
 
 def __getattr__(name: str) -> Any:
@@ -24,7 +28,19 @@ class Shapes:
         # After initialization, setting attributes is the same as setting an item.
         self.__initialized = True
 
-    def __getattr__(self, name: str) -> Union[Placeholder, Tuple[int, ...]]:
+    def __getattr__(
+        self, name: str
+    ) -> Union[  # type: ignore[valid-type]
+        Placeholder, Tuple[int, ...], str, dict, NoneType, ModuleType, FILELOADER,
+    ]:
+
+        # Don't return sympy symbols for native module attributes.
+        if name in PYATTRS:
+            if name not in globals():
+                raise AttributeError
+            attr = globals()[name]
+            return attr
+
         if name in self.placeholder_map:
             return self.placeholder_map[name]
         placeholder = Placeholder(name)

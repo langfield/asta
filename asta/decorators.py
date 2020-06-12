@@ -3,20 +3,15 @@
 """ Defines the ``@typechecked`` decorator. """
 import os
 import inspect
-from typing import Any, Tuple, Dict, Set
-
-from sympy.core.expr import Expr
+from typing import Any, Set, Dict, Tuple
 
 from oxentiel import Oxentiel
+from sympy.core.expr import Expr
 
 from asta.utils import astasolver
 from asta.config import get_ox
+from asta.display import get_header, fail_system, handle_pass
 from asta.origins import check_annotation
-from asta.display import (
-    fail_system,
-    get_header,
-    handle_pass,
-)
 
 
 def validate_annotations(  # type: ignore[no-untyped-def]
@@ -61,7 +56,9 @@ def validate_annotations(  # type: ignore[no-untyped-def]
         num_annot_err += f"non-(self / cls / mcs) parameters "
         num_annot_err += f"'({num_non_return_annots})' and number of arguments "
         num_annot_err += f"'({len(checkable_args)})'. "
-        num_annot_err += f"There may be a type annotation missing."
+        num_annot_err += f"Possible causes: wrong number of arguments, or missing"
+        num_annot_err += f"type hint."
+
         raise TypeError(num_annot_err)
 
     return checkable_args
@@ -148,6 +145,11 @@ def typechecked(decorated):  # type: ignore[no-untyped-def]
             annotation = annotations[name]
             equations = check_annotation(name, arg, annotation, equations, ox)
             del annotation
+
+        # Solve our system of equations if it is nonempty.
+        solvable, symbols, solutions = astasolver(equations)
+        if not solvable:
+            fail_system(equations, symbols, solutions, ox)
 
         # Call the decorated function.
         ret = decorated(*args, **kwargs)

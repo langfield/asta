@@ -1,17 +1,15 @@
 """ Functions for generating typechecker output. """
 import inspect
-from typing import Any, Dict, Set, List, FrozenSet, Union
+from typing import Any, Set, Dict, List, Union, FrozenSet
 
 import numpy as np
+from oxentiel import Oxentiel
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
 
-from oxentiel import Oxentiel
-
 from asta.array import Array
 from asta.classes import SubscriptableMeta
-from asta.constants import torch, tf, Color, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
-
+from asta.constants import _TORCH_IMPORTED, _TENSORFLOW_IMPORTED, Color, tf, torch
 
 if _TORCH_IMPORTED:
     from asta.tensor import Tensor
@@ -103,7 +101,7 @@ def fail_numerical_expression(
 ) -> None:
     """ For when refreshed expression yields non-integer ``Number``. """
     err = f"{FAIL}: Refreshed value '{expression}' for expression '{item}' "
-    err += f"does not yield an integer."
+    err += "does not yield an integer."
     handle_error(err, ox)
 
 

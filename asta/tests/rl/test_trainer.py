@@ -2,14 +2,13 @@
 # -*- coding: utf-8 -*-
 # type: ignore
 """ An example trainer for a simply policy gradient implementation. """
+import gym
 import torch
+from oxentiel import Oxentiel
 from torch.optim import Adam
 
-import gym
-from oxentiel import Oxentiel
-
 from asta import dims, shapes
-from asta.tests.rl.pg import get_action, compute_loss, Policy, Trajectories
+from asta.tests.rl.pg import Policy, Trajectories, get_action, compute_loss
 
 
 def train(ox: Oxentiel) -> None:

@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """ Scalar type class. """
 from typing import List
-from asta.constants import GENERIC_TYPES, ARRAY_TYPES, ScalarMeta
+
+from asta.constants import ARRAY_TYPES, GENERIC_TYPES, ScalarMeta
 
 # pylint: disable=too-few-public-methods
 
