@@ -1,7 +1,10 @@
+gym
 toml
 numpy
 sympy
+torch
 pytest
 oxentiel
 hypothesis
+tensorflow
 sphinxcontrib-katex
