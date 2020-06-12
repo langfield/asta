@@ -2,19 +2,15 @@
 # -*- coding: utf-8 -*-
 """ This module contains a superclass for the ``TFTensor`` type. """
 from abc import abstractmethod
-from typing import List, Optional, Any, Tuple, Dict, Union
+from typing import Any, Dict, List, Tuple, Union, Optional
 
 import numpy as np
 import tensorflow as tf
 
-from asta.utils import shapecheck, attrcheck
+from asta.utils import attrcheck, shapecheck
 from asta.parser import parse_subscript
-from asta.classes import SubscriptableMeta, GenericMeta
-from asta.constants import (
-    EllipsisType,
-    TF_DIM_TYPES,
-    TF_DTYPE_MAP,
-)
+from asta.classes import GenericMeta, SubscriptableMeta
+from asta.constants import TF_DIM_TYPES, TF_DTYPE_MAP, EllipsisType
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
 

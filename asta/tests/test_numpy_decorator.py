@@ -6,13 +6,12 @@ import os
 import functools
 from typing import List, Tuple
 
-import pytest
 import numpy as np
-
-from hypothesis import given
+import pytest
 import hypothesis.extra.numpy as hnp
+from hypothesis import given
 
-from asta import Array, typechecked, symbols, dims, shapes
+from asta import Array, dims, shapes, symbols, typechecked
 
 os.environ["ASTA_TYPECHECK"] = "1"
 

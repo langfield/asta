@@ -3,20 +3,15 @@
 """ Defines the ``@typechecked`` decorator. """
 import os
 import inspect
-from typing import Any, Tuple, Dict, Set
-
-from sympy.core.expr import Expr
+from typing import Any, Set, Dict, Tuple
 
 from oxentiel import Oxentiel
+from sympy.core.expr import Expr
 
 from asta.utils import astasolver
 from asta.config import get_ox
+from asta.display import get_header, fail_system, handle_pass
 from asta.origins import check_annotation
-from asta.display import (
-    fail_system,
-    get_header,
-    handle_pass,
-)
 
 
 def validate_annotations(  # type: ignore[no-untyped-def]

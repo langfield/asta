@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 # type: ignore
 """ Tests for the 'Array' typing class. """
-from typing import Tuple, List
+from typing import List, Tuple
 
-import pytest
 import numpy as np
+import pytest
 import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 from hypothesis import given, assume
 
 from asta import Array, Scalar
-from asta.utils import rand_split_shape
 from asta.tests import strategies as strats
+from asta.utils import rand_split_shape
 
 # pylint: disable=no-value-for-parameter
 

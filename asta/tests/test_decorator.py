@@ -6,13 +6,12 @@ import os
 import functools
 from typing import List, Tuple, Optional
 
+import numpy as np
 import torch
 import pytest
-import numpy as np
-
 from hypothesis import given
 
-from asta import Array, Tensor, typechecked, symbols, dims, shapes
+from asta import Array, Tensor, dims, shapes, symbols, typechecked
 from asta.tests import hpt
 
 os.environ["ASTA_TYPECHECK"] = "1"

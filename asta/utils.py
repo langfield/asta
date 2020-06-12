@@ -3,19 +3,20 @@
 """ Typechecking utilities. """
 import random
 import functools
-from typing import List, Dict, Tuple, Union, Any, Set, Optional
+from typing import Any, Set, Dict, List, Tuple, Union, Optional
 
 from sympy import solvers, simplify
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
+
 from asta.constants import (
-    EllipsisType,
-    NonInstanceType,
-    GenericArray,
-    torch,
-    tf,
     _TORCH_IMPORTED,
     _TENSORFLOW_IMPORTED,
+    EllipsisType,
+    GenericArray,
+    NonInstanceType,
+    tf,
+    torch,
 )
 
 # pylint: disable=too-many-boolean-expressions, too-many-branches

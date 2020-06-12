@@ -5,7 +5,6 @@
 from asta.unusable import Tensor, TFTensor
 from asta.constants import _TORCH_IMPORTED, _TENSORFLOW_IMPORTED
 
-
 if _TORCH_IMPORTED:
     from asta.tensor import Tensor
 if _TENSORFLOW_IMPORTED:

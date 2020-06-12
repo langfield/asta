@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Functions for checking type annotations and their origin types. """
-from typing import Any, Tuple, Set, List, Union
+from typing import Any, Set, List, Tuple, Union
 
+from oxentiel import Oxentiel
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
 from sympy.core.numbers import Number, Integer
-
-from oxentiel import Oxentiel
 
 import asta.dims
 import asta.shapes

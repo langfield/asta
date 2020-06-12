@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ A module for storing python objects for internal asta use. """
-from typing import Dict, Any
+from typing import Any, Dict
 
 # pylint: disable=redefined-outer-name
 

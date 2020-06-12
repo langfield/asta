@@ -3,18 +3,14 @@
 """ This module contains meta functionality for the ``Array`` type. """
 import datetime
 from abc import abstractmethod
-from typing import List, Optional, Any, Tuple, Dict, Union
+from typing import Any, Dict, List, Tuple, Union, Optional
 
 import numpy as np
 
-from asta.utils import shapecheck, attrcheck
+from asta.utils import attrcheck, shapecheck
 from asta.parser import parse_subscript
-from asta.classes import SubscriptableMeta, GenericMeta
-from asta.constants import (
-    EllipsisType,
-    NUMPY_DIM_TYPES,
-    NP_UNSIZED_TYPE_KINDS,
-)
+from asta.classes import GenericMeta, SubscriptableMeta
+from asta.constants import NUMPY_DIM_TYPES, NP_UNSIZED_TYPE_KINDS, EllipsisType
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
 

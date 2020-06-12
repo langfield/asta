@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ This module contains a general subscript parser for subscriptable types. """
-from typing import Optional, Tuple, Union, Dict, Any
+from typing import Any, Dict, Tuple, Union, Optional
 
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol

@@ -3,62 +3,61 @@
 """ Functions for checking type annotations and their origin types. """
 import inspect
 import collections
-from io import TextIOBase, RawIOBase, IOBase, BufferedIOBase
+from io import IOBase, RawIOBase, TextIOBase, BufferedIOBase
 from typing import (
+    IO,
     Any,
-    Tuple,
     Set,
     Dict,
     List,
-    AbstractSet,
-    Callable,
-    Union,
-    IO,
-    Sequence,
     Type,
+    Tuple,
+    Union,
     TextIO,
     BinaryIO,
+    Callable,
+    Sequence,
+    AbstractSet,
 )
 
+from oxentiel import Oxentiel
 from sympy.core.expr import Expr
 
-from oxentiel import Oxentiel
-
-from asta.utils import shapecheck, attrcheck
 from asta.array import Array
+from asta.utils import attrcheck, shapecheck
 from asta._array import _ArrayMeta
 from asta.classes import SubscriptableMeta
 from asta.display import (
-    get_type_name,
-    qualified_name,
-    type_representation,
-    pass_argument,
-    fail_argument,
+    fail_io,
+    fail_set,
+    fail_dict,
+    fail_keys,
+    fail_list,
+    fail_class,
+    fail_float,
     fail_tuple,
-    fail_tuple_length,
+    fail_union,
+    fail_complex,
+    fail_literal,
+    fail_text_io,
+    fail_argument,
+    fail_callable,
+    fail_fallback,
+    fail_protocol,
+    fail_sequence,
+    fail_subclass,
+    get_type_name,
+    pass_argument,
+    fail_binary_io,
+    qualified_name,
     fail_namedtuple,
     fail_empty_tuple,
-    fail_list,
-    fail_sequence,
-    fail_dict,
-    fail_set,
-    fail_keys,
-    fail_callable,
-    fail_union,
-    fail_class,
-    fail_subclass,
-    fail_io,
-    fail_text_io,
-    fail_binary_io,
-    fail_complex,
-    fail_float,
-    fail_protocol,
-    fail_literal,
-    fail_too_many_args,
     fail_too_few_args,
-    fail_fallback,
+    fail_tuple_length,
+    fail_too_many_args,
+    type_representation,
 )
-from asta.constants import torch, tf, _TORCH_IMPORTED, _TENSORFLOW_IMPORTED, NoneType
+from asta.constants import _TORCH_IMPORTED, _TENSORFLOW_IMPORTED, NoneType, tf, torch
 from asta.substitution import substitute
 
 METAMAP: Dict[type, SubscriptableMeta] = {_ArrayMeta: Array}
@@ -487,7 +486,7 @@ def check_literal(name: str, value: Any, annotation: Any, ox: Oxentiel) -> None:
 def check_none(name: str, value: Any, annotation: Any, ox: Oxentiel) -> None:
     """ Typecheck a value annotated with ``NoneType``. """
     if value is not None:
-        fail_literal(name, None, value, ox)
+        fail_literal(name, [None], value, ox)
 
 
 # Equality checks are applied to these.

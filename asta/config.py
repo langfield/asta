@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Configuration parsing and loading (credit to pylint authors). """
-import os
 import io
+import os
 import collections
 import configparser
-from typing import Generator, Optional, Dict, Any
+from typing import Any, Dict, Optional, Generator
 
 import toml
 from oxentiel import Oxentiel

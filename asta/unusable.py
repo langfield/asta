@@ -1,15 +1,23 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ Dummy classes for use when ``torch`` or ``tensorflow`` are not installed. """
-from typing import Any
 from abc import abstractmethod
-from asta.classes import SubscriptableMeta, GenericMeta
+from typing import Any, Dict, Tuple
+
+import numpy as np
+
+from asta.classes import GenericMeta, SubscriptableMeta
 
 # pylint: disable=import-outside-toplevel, unused-import, too-few-public-methods
 
 
 class UnusableMeta(SubscriptableMeta):
     """ A meta class for the dummy ``Tensor`` and ``TFTensor`` classes. """
+
+    NAME: str = ""
+    dtype: np.dtype = np.dtype("float64")
+    shape: Tuple = ()
+    kwattrs: Dict[str, Any] = {}
 
     @classmethod
     @abstractmethod

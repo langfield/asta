@@ -5,12 +5,11 @@
 from typing import List, Tuple
 
 import numpy as np
-
 import torch
 import torch.nn as nn
 from torch.distributions.categorical import Categorical
 
-from asta import dims, shapes, symbols, Array, Tensor, typechecked
+from asta import Array, Tensor, dims, shapes, symbols, typechecked
 
 X = symbols.X
 OB = shapes.OB

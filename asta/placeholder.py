@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """ A placeholder class for lazy-set shapes in asta annotations. """
-from typing import Optional, List, Union, Tuple, Any
+from typing import Any, List, Tuple, Union, Optional
+
 from sympy.core.expr import Expr
 from sympy.core.symbol import Symbol
 

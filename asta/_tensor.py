@@ -2,19 +2,15 @@
 # -*- coding: utf-8 -*-
 """ This module contains meta functionality for the ``Tensor`` type. """
 from abc import abstractmethod
-from typing import List, Optional, Any, Tuple, Dict, Union
+from typing import Any, Dict, List, Tuple, Union, Optional
 
-import torch
 import numpy as np
+import torch
 
-from asta.utils import shapecheck, attrcheck
+from asta.utils import attrcheck, shapecheck
 from asta.parser import parse_subscript
-from asta.classes import SubscriptableMeta, GenericMeta
-from asta.constants import (
-    EllipsisType,
-    TORCH_DIM_TYPES,
-    TORCH_DTYPE_MAP,
-)
+from asta.classes import GenericMeta, SubscriptableMeta
+from asta.constants import TORCH_DIM_TYPES, TORCH_DTYPE_MAP, EllipsisType
 
 # pylint: disable=unidiomatic-typecheck, too-few-public-methods, too-many-nested-blocks
 

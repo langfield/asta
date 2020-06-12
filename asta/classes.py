@@ -3,7 +3,7 @@
 """ Supermetaclasses for ``_Array``-like asta types. """
 import types
 from abc import abstractmethod
-from typing import TypeVar, Generic, Any, Optional, Tuple, List, Dict
+from typing import Any, Dict, List, Tuple, Generic, TypeVar, Optional
 
 import numpy as np
 from oxentiel import Oxentiel

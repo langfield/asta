@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """ Support for typing TensorFlow tensors. """
 import tensorflow as tf
+
 from asta._tftensor import _TFTensor
 
 # pylint: disable=too-few-public-methods

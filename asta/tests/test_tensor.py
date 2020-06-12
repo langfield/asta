@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # type: ignore
 """ Tests for the 'Tensor' typing class. """
-from typing import Tuple, List
+from typing import List, Tuple
 
 import torch
 import pytest
@@ -10,7 +10,7 @@ import hypothesis.strategies as st
 import hypothesis.extra.numpy as hnp
 from hypothesis import given, assume
 
-from asta import Tensor, Scalar
+from asta import Scalar, Tensor
 from asta.tests import hpt
 from asta.utils import rand_split_shape
 
