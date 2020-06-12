@@ -1,1 +1,7 @@
+toml
+numpy
+sympy
+pytest
+oxentiel
+hypothesis
 sphinxcontrib-katex
