@@ -6,7 +6,7 @@ import torch
 from asta._tensor import _Tensor
 
 
-class Tensor(_Tensor, torch.Tensor):
+class Tensor(_Tensor):
     """
     A subclass of ``torch.Tensor`` for use in type annotations.
 
