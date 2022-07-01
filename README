@@ -14,8 +14,7 @@ enforcement for the classes described above.
 
 Installation
 ------------
-$ pip install asta
-$ pip install git+git://github.com/langfield/asta.git
+pip install asta
 
 
 Basics
